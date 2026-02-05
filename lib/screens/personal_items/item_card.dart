@@ -1,0 +1,413 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import '../../models/item_model.dart';
+import '../../providers/providers.dart';
+
+class ItemCard extends ConsumerWidget {
+  final ReminderItem item;
+  final VoidCallback? onTap;
+  final VoidCallback? onDelete;
+  final bool enableSwipe;
+
+  const ItemCard({
+    super.key,
+    required this.item,
+    this.onTap,
+    this.onDelete,
+    this.enableSwipe = true,
+  });
+
+  bool get _isOverdue =>
+      !item.isCompleted &&
+      item.remindAt != null &&
+      item.remindAt!.isBefore(DateTime.now());
+
+  Color _getPriorityColor(ItemPriority priority, ColorScheme colorScheme) {
+    switch (priority) {
+      case ItemPriority.high:
+        return colorScheme.error;
+      case ItemPriority.medium:
+        return Colors.orange;
+      case ItemPriority.low:
+        return colorScheme.primary;
+      case ItemPriority.none:
+        return colorScheme.outline;
+    }
+  }
+
+  IconData _getPriorityIcon(ItemPriority priority) {
+    switch (priority) {
+      case ItemPriority.high:
+        return Icons.priority_high_rounded;
+      case ItemPriority.medium:
+        return Icons.remove_rounded;
+      case ItemPriority.low:
+        return Icons.arrow_downward_rounded;
+      case ItemPriority.none:
+        return Icons.horizontal_rule_rounded;
+    }
+  }
+
+  String _formatRemindAt(DateTime dateTime) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final tomorrow = today.add(const Duration(days: 1));
+    final date = DateTime(dateTime.year, dateTime.month, dateTime.day);
+
+    final timeFormat = DateFormat.jm();
+    final dateFormat = DateFormat.MMMd();
+
+    if (date == today) {
+      return 'Today ${timeFormat.format(dateTime)}';
+    } else if (date == tomorrow) {
+      return 'Tomorrow ${timeFormat.format(dateTime)}';
+    } else if (date.isBefore(today.add(const Duration(days: 7)))) {
+      return '${DateFormat.EEEE().format(dateTime)} ${timeFormat.format(dateTime)}';
+    } else {
+      return '${dateFormat.format(dateTime)} ${timeFormat.format(dateTime)}';
+    }
+  }
+
+  Future<void> _handleComplete(WidgetRef ref, bool value) async {
+    final user = ref.read(currentUserProvider);
+    if (user == null) return;
+
+    HapticFeedback.lightImpact();
+
+    final itemService = ref.read(itemServiceProvider);
+    final notificationService = ref.read(localNotificationServiceProvider);
+
+    await itemService.toggleComplete(
+      itemId: item.itemId,
+      updatedByUid: user.uid,
+      isCompleted: value,
+    );
+
+    // Cancel notification if completed
+    if (value) {
+      await notificationService.cancelItemNotification(item.itemId);
+    } else if (item.remindAt != null && item.remindAt!.isAfter(DateTime.now())) {
+      // Reschedule notification if uncompleted and has future remind time
+      await notificationService.scheduleItemNotification(
+        item.copyWith(isCompleted: false),
+      );
+    }
+  }
+
+  Future<bool> _handleDelete(BuildContext context, WidgetRef ref) async {
+    final user = ref.read(currentUserProvider);
+    if (user == null) return false;
+
+    HapticFeedback.mediumImpact();
+
+    final itemService = ref.read(itemServiceProvider);
+    final notificationService = ref.read(localNotificationServiceProvider);
+
+    // Store item for undo before deleting
+    final deletedItem = item;
+
+    await notificationService.cancelItemNotification(item.itemId);
+    final success = await itemService.deleteItem(item.itemId);
+
+    if (success && context.mounted) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Deleted "${item.title}"'),
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () async {
+              // Restore the item
+              final restored = await itemService.restoreItem(deletedItem);
+              if (restored && context.mounted) {
+                // Reschedule notification if needed
+                if (deletedItem.remindAt != null &&
+                    deletedItem.remindAt!.isAfter(DateTime.now()) &&
+                    !deletedItem.isCompleted) {
+                  await notificationService.scheduleItemNotification(deletedItem);
+                }
+              }
+            },
+          ),
+        ),
+      );
+    }
+
+    return success;
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final priorityColor = _getPriorityColor(item.priority, colorScheme);
+
+    Widget cardContent = Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      color: _isOverdue
+          ? colorScheme.errorContainer.withValues(alpha: 0.3)
+          : null,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Checkbox
+              _CompletionCheckbox(
+                isCompleted: item.isCompleted,
+                priorityColor: _isOverdue ? colorScheme.error : priorityColor,
+                onChanged: (value) => _handleComplete(ref, value),
+              ),
+
+              const SizedBox(width: 12),
+
+              // Content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title
+                    Text(
+                      item.title,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w500,
+                        decoration: item.isCompleted
+                            ? TextDecoration.lineThrough
+                            : null,
+                        color: item.isCompleted
+                            ? colorScheme.onSurface.withValues(alpha: 0.5)
+                            : _isOverdue
+                                ? colorScheme.error
+                                : null,
+                      ),
+                    ),
+
+                    // Details
+                    if (item.details != null && item.details!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        item.details!,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurface.withValues(alpha: 0.6),
+                          decoration: item.isCompleted
+                              ? TextDecoration.lineThrough
+                              : null,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+
+                    // Remind at and repeat
+                    if (item.remindAt != null || item.repeatRule != null) ...[
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: [
+                          if (item.remindAt != null)
+                            _InfoChip(
+                              icon: _isOverdue
+                                  ? Icons.warning_rounded
+                                  : Icons.schedule_rounded,
+                              label: _isOverdue
+                                  ? 'Overdue - ${_formatRemindAt(item.remindAt!)}'
+                                  : _formatRemindAt(item.remindAt!),
+                              isOverdue: _isOverdue,
+                            ),
+                          if (item.repeatRule != null)
+                            _InfoChip(
+                              icon: Icons.repeat_rounded,
+                              label: item.repeatRule == 'daily'
+                                  ? 'Daily'
+                                  : 'Weekly',
+                            ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+
+              // Priority indicator
+              if (item.priority != ItemPriority.none) ...[
+                const SizedBox(width: 8),
+                Icon(
+                  _getPriorityIcon(item.priority),
+                  size: 18,
+                  color: priorityColor,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (!enableSwipe) return cardContent;
+
+    // Wrap with Dismissible for swipe actions
+    return Dismissible(
+      key: Key(item.itemId),
+      background: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.green,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.only(left: 20),
+        child: const Icon(Icons.check_rounded, color: Colors.white, size: 28),
+      ),
+      secondaryBackground: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        decoration: BoxDecoration(
+          color: colorScheme.error,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        child: const Icon(Icons.delete_rounded, color: Colors.white, size: 28),
+      ),
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.startToEnd) {
+          // Swipe right to complete/uncomplete
+          await _handleComplete(ref, !item.isCompleted);
+          return false; // Don't dismiss, just toggle
+        } else {
+          // Swipe left to delete
+          return await _handleDelete(context, ref);
+        }
+      },
+      child: cardContent,
+    );
+  }
+}
+
+class _CompletionCheckbox extends StatefulWidget {
+  final bool isCompleted;
+  final Color priorityColor;
+  final ValueChanged<bool> onChanged;
+
+  const _CompletionCheckbox({
+    required this.isCompleted,
+    required this.priorityColor,
+    required this.onChanged,
+  });
+
+  @override
+  State<_CompletionCheckbox> createState() => _CompletionCheckboxState();
+}
+
+class _CompletionCheckboxState extends State<_CompletionCheckbox>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () async {
+        await _controller.forward();
+        await _controller.reverse();
+        widget.onChanged(!widget.isCompleted);
+      },
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: widget.isCompleted
+                  ? widget.priorityColor
+                  : widget.priorityColor.withValues(alpha: 0.5),
+              width: 2,
+            ),
+            color: widget.isCompleted
+                ? widget.priorityColor
+                : Colors.transparent,
+          ),
+          child: widget.isCompleted
+              ? const Icon(
+                  Icons.check_rounded,
+                  size: 18,
+                  color: Colors.white,
+                )
+              : null,
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool isOverdue;
+
+  const _InfoChip({
+    required this.icon,
+    required this.label,
+    this.isOverdue = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: isOverdue
+            ? colorScheme.error.withValues(alpha: 0.1)
+            : colorScheme.primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 14,
+            color: isOverdue ? colorScheme.error : colorScheme.primary,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: isOverdue ? colorScheme.error : colorScheme.primary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

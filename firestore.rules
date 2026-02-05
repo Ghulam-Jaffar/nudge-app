@@ -1,0 +1,123 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    // ============================================
+    // USERS COLLECTION
+    // ============================================
+    match /users/{userId} {
+      // Anyone authenticated can read user profiles (for searching by handle)
+      allow read: if isAuthenticated();
+
+      // Only the user can write their own document
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if false; // Users cannot delete their accounts directly
+    }
+
+    // ============================================
+    // HANDLES COLLECTION (for uniqueness)
+    // ============================================
+    match /handles/{handleLower} {
+      // Anyone authenticated can check if a handle exists
+      allow read: if isAuthenticated();
+
+      // Only allow creating if:
+      // 1. User is authenticated
+      // 2. The handle document contains the user's UID
+      allow create: if isAuthenticated() &&
+                       request.resource.data.uid == request.auth.uid;
+
+      // Only allow updating/deleting if user owns this handle
+      allow update, delete: if isAuthenticated() &&
+                               resource.data.uid == request.auth.uid;
+    }
+
+    // ============================================
+    // ITEMS COLLECTION
+    // ============================================
+    match /items/{itemId} {
+      // Personal items: only owner can read
+      // Space items: any authenticated user can read (membership checked client-side)
+      allow read: if isAuthenticated() && (
+        // Personal item owned by user
+        (resource.data.type == 'personal' && resource.data.ownerUid == request.auth.uid) ||
+        // Space item - any authenticated user can read
+        (resource.data.type == 'space')
+      );
+
+      allow create: if isAuthenticated() && (
+        // Creating a personal item
+        (request.resource.data.type == 'personal' &&
+         request.resource.data.ownerUid == request.auth.uid &&
+         request.resource.data.createdByUid == request.auth.uid) ||
+        // Creating a space item
+        (request.resource.data.type == 'space' &&
+         request.resource.data.createdByUid == request.auth.uid)
+      );
+
+      allow update: if isAuthenticated() && (
+        // Personal item owned by user
+        (resource.data.type == 'personal' && resource.data.ownerUid == request.auth.uid) ||
+        // Space item - any authenticated user can update
+        (resource.data.type == 'space')
+      );
+
+      allow delete: if isAuthenticated() && (
+        // Personal item owned by user
+        (resource.data.type == 'personal' && resource.data.ownerUid == request.auth.uid) ||
+        // Space item - any authenticated user can delete
+        (resource.data.type == 'space')
+      );
+    }
+
+    // ============================================
+    // SPACES COLLECTION
+    // ============================================
+    match /spaces/{spaceId} {
+      // Any authenticated user can read spaces (filtered by membership client-side)
+      allow read: if isAuthenticated();
+
+      // Anyone authenticated can create a space (they become owner)
+      allow create: if isAuthenticated() &&
+                       request.resource.data.ownerUid == request.auth.uid;
+
+      // Any authenticated user can update (membership checked client-side)
+      allow update: if isAuthenticated();
+
+      // Only owner can delete a space
+      allow delete: if isAuthenticated() &&
+                       resource.data.ownerUid == request.auth.uid;
+    }
+
+    // ============================================
+    // SPACE INVITES COLLECTION
+    // ============================================
+    match /spaceInvites/{inviteId} {
+      // Sender, recipient, or any authenticated user can read invites
+      // (needed for checking if invite already exists when creating)
+      allow read: if isAuthenticated();
+
+      // Any authenticated user can create invites
+      allow create: if isAuthenticated() &&
+                       request.resource.data.fromUid == request.auth.uid;
+
+      // Sender or recipient can update
+      allow update: if isAuthenticated() &&
+                       (resource.data.fromUid == request.auth.uid ||
+                        resource.data.toUid == request.auth.uid);
+
+      // No one can delete invites (keep for audit)
+      allow delete: if false;
+    }
+  }
+}

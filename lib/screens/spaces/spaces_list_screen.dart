@@ -1,0 +1,262 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../models/space_model.dart';
+import '../../providers/providers.dart';
+import 'space_editor_sheet.dart';
+
+class SpacesListScreen extends ConsumerStatefulWidget {
+  const SpacesListScreen({super.key});
+
+  @override
+  ConsumerState<SpacesListScreen> createState() => _SpacesListScreenState();
+}
+
+class _SpacesListScreenState extends ConsumerState<SpacesListScreen> {
+  Future<void> _onRefresh() async {
+    HapticFeedback.mediumImpact();
+    ref.invalidate(userSpacesProvider);
+    ref.invalidate(pendingInvitesProvider);
+    await Future.delayed(const Duration(milliseconds: 500));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final pendingCount = ref.watch(pendingInvitesCountProvider);
+    final spacesAsync = ref.watch(userSpacesProvider);
+
+    return Scaffold(
+      body: RefreshIndicator(
+        onRefresh: _onRefresh,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverAppBar(
+              floating: true,
+              title: const Text('Spaces'),
+              actions: [
+                if (pendingCount > 0)
+                  Badge(
+                    label: Text('$pendingCount'),
+                    child: IconButton(
+                      icon: const Icon(Icons.mail_outline_rounded),
+                      onPressed: () => context.push('/invites'),
+                    ),
+                  )
+                else
+                  IconButton(
+                    icon: const Icon(Icons.mail_outline_rounded),
+                    onPressed: () => context.push('/invites'),
+                  ),
+              ],
+            ),
+            spacesAsync.when(
+              data: (spaces) {
+                if (spaces.isEmpty) {
+                  return SliverFillRemaining(
+                    child: _buildEmptyState(theme, colorScheme),
+                  );
+                }
+                return SliverPadding(
+                  padding: const EdgeInsets.only(
+                    left: 16,
+                    right: 16,
+                    top: 16,
+                    bottom: 100,
+                  ),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final space = spaces[index];
+                        return _SpaceCard(space: space);
+                      },
+                      childCount: spaces.length,
+                    ),
+                  ),
+                );
+              },
+              loading: () => const SliverFillRemaining(
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (error, stack) => SliverFillRemaining(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 100,
+                        height: 100,
+                        decoration: BoxDecoration(
+                          color: colorScheme.errorContainer.withValues(alpha: 0.3),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.cloud_off_rounded,
+                          size: 50,
+                          color: colorScheme.error,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        'Oops! Something went wrong',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Pull down to try again',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      OutlinedButton.icon(
+                        onPressed: _onRefresh,
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          HapticFeedback.lightImpact();
+          SpaceEditorSheet.show(context);
+        },
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('New'),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(ThemeData theme, ColorScheme colorScheme) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              color: colorScheme.primaryContainer.withValues(alpha: 0.3),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.group_work_rounded,
+              size: 60,
+              color: colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'No spaces yet',
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Create a space to share reminders\nwith friends and family',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          const SizedBox(height: 24),
+          FilledButton.icon(
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              SpaceEditorSheet.show(context);
+            },
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('Create Space'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SpaceCard extends StatelessWidget {
+  final Space space;
+
+  const _SpaceCard({required this.space});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: () => context.push('/spaces/${space.spaceId}'),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              // Emoji or icon
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: space.emoji != null
+                      ? Text(
+                          space.emoji!,
+                          style: const TextStyle(fontSize: 24),
+                        )
+                      : Icon(
+                          Icons.group_work_rounded,
+                          color: colorScheme.primary,
+                        ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Name and member count
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      space.name,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${space.memberCount} ${space.memberCount == 1 ? 'member' : 'members'}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Arrow
+              Icon(
+                Icons.chevron_right_rounded,
+                color: colorScheme.onSurface.withValues(alpha: 0.4),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
