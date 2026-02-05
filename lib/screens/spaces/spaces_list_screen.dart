@@ -227,7 +227,7 @@ class _SpaceCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 16),
-              // Name and member count
+              // Name and counts
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -239,11 +239,34 @@ class _SpaceCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      '${space.memberCount} ${space.memberCount == 1 ? 'member' : 'members'}',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.people_outline_rounded,
+                          size: 16,
+                          color: colorScheme.onSurface.withValues(alpha: 0.5),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${space.memberCount}',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurface.withValues(alpha: 0.6),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Icon(
+                          Icons.checklist_rounded,
+                          size: 16,
+                          color: colorScheme.onSurface.withValues(alpha: 0.5),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${space.itemCount}',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurface.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

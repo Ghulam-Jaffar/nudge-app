@@ -7,6 +7,7 @@ import '../../providers/providers.dart';
 import '../personal_items/item_card.dart';
 import '../personal_items/item_editor_sheet.dart';
 import 'invite_user_sheet.dart';
+import 'space_activity_screen.dart';
 import 'space_editor_sheet.dart';
 import 'space_members_sheet.dart';
 
@@ -47,6 +48,15 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
     );
   }
 
+  void _showActivityScreen(Space space) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SpaceActivityScreen(spaceId: space.spaceId),
+      ),
+    );
+  }
+
   void _showMembersSheet(Space space) {
     SpaceMembersSheet.show(context, space: space);
   }
@@ -71,6 +81,14 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            ListTile(
+              leading: const Icon(Icons.history_rounded),
+              title: const Text('Activity'),
+              onTap: () {
+                Navigator.pop(context);
+                _showActivityScreen(space);
+              },
+            ),
             ListTile(
               leading: const Icon(Icons.people_outline_rounded),
               title: const Text('Members'),
@@ -115,10 +133,75 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                   _confirmLeaveSpace(space);
                 },
               ),
+            if (isOwner)
+              ListTile(
+                leading: Icon(
+                  Icons.delete_outline_rounded,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                title: Text(
+                  'Delete Space',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmDeleteSpace(space);
+                },
+              ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _confirmDeleteSpace(Space space) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Space'),
+        content: Text(
+          'Are you sure you want to delete "${space.name}"? '
+          'This will permanently delete all items in this space. '
+          'This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final spaceService = ref.read(spaceServiceProvider);
+    final success = await spaceService.deleteSpace(space.spaceId);
+
+    if (!mounted) return;
+
+    if (success) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Deleted ${space.name}')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Failed to delete space'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
   }
 
   Future<void> _confirmLeaveSpace(Space space) async {

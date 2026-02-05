@@ -10,6 +10,7 @@ class ItemCard extends ConsumerWidget {
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
   final bool enableSwipe;
+  final String? assigneeName; // Display name of assigned user
 
   const ItemCard({
     super.key,
@@ -17,6 +18,7 @@ class ItemCard extends ConsumerWidget {
     this.onTap,
     this.onDelete,
     this.enableSwipe = true,
+    this.assigneeName,
   });
 
   bool get _isOverdue =>
@@ -109,7 +111,7 @@ class ItemCard extends ConsumerWidget {
     final deletedItem = item;
 
     await notificationService.cancelItemNotification(item.itemId);
-    final success = await itemService.deleteItem(item.itemId);
+    final success = await itemService.deleteItem(item.itemId, spaceId: item.spaceId);
 
     if (success && context.mounted) {
       ScaffoldMessenger.of(context).clearSnackBars();
@@ -139,11 +141,19 @@ class ItemCard extends ConsumerWidget {
     return success;
   }
 
+  bool _isUnread(String? currentUserUid) {
+    if (currentUserUid == null) return false;
+    if (item.type == ItemType.personal) return false; // Personal items don't need unread
+    return !item.viewedBy.contains(currentUserUid);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final priorityColor = _getPriorityColor(item.priority, colorScheme);
+    final currentUser = ref.watch(currentUserProvider);
+    final isUnread = _isUnread(currentUser?.uid);
 
     Widget cardContent = Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -204,8 +214,8 @@ class ItemCard extends ConsumerWidget {
                       ),
                     ],
 
-                    // Remind at and repeat
-                    if (item.remindAt != null || item.repeatRule != null) ...[
+                    // Remind at, repeat, and assignee
+                    if (item.remindAt != null || item.repeatRule != null || item.assignedToUid != null) ...[
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 8,
@@ -228,6 +238,12 @@ class ItemCard extends ConsumerWidget {
                                   ? 'Daily'
                                   : 'Weekly',
                             ),
+                          if (item.assignedToUid != null && assigneeName != null)
+                            _InfoChip(
+                              icon: Icons.person_outline_rounded,
+                              label: assigneeName!,
+                              isAssignee: true,
+                            ),
                         ],
                       ),
                     ],
@@ -235,13 +251,30 @@ class ItemCard extends ConsumerWidget {
                 ),
               ),
 
-              // Priority indicator
-              if (item.priority != ItemPriority.none) ...[
+              // Priority indicator and unread dot
+              if (item.priority != ItemPriority.none || isUnread) ...[
                 const SizedBox(width: 8),
-                Icon(
-                  _getPriorityIcon(item.priority),
-                  size: 18,
-                  color: priorityColor,
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isUnread)
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: colorScheme.primary,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    if (isUnread && item.priority != ItemPriority.none)
+                      const SizedBox(height: 4),
+                    if (item.priority != ItemPriority.none)
+                      Icon(
+                        _getPriorityIcon(item.priority),
+                        size: 18,
+                        color: priorityColor,
+                      ),
+                  ],
                 ),
               ],
             ],
@@ -254,7 +287,13 @@ class ItemCard extends ConsumerWidget {
 
     // Wrap with Dismissible for swipe actions
     return Dismissible(
-      key: Key(item.itemId),
+      key: ValueKey('dismissible_${item.itemId}'),
+      dismissThresholds: const {
+        DismissDirection.startToEnd: 0.3,
+        DismissDirection.endToStart: 0.3,
+      },
+      movementDuration: const Duration(milliseconds: 200),
+      resizeDuration: const Duration(milliseconds: 300),
       background: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         decoration: BoxDecoration(
@@ -282,8 +321,13 @@ class ItemCard extends ConsumerWidget {
           return false; // Don't dismiss, just toggle
         } else {
           // Swipe left to delete
-          return await _handleDelete(context, ref);
+          final result = await _handleDelete(context, ref);
+          return result;
         }
+      },
+      onDismissed: (direction) {
+        // Only called when confirmDismiss returns true (deletion)
+        onDelete?.call();
       },
       child: cardContent,
     );
@@ -370,23 +414,37 @@ class _InfoChip extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool isOverdue;
+  final bool isAssignee;
 
   const _InfoChip({
     required this.icon,
     required this.label,
     this.isOverdue = false,
+    this.isAssignee = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
+    Color bgColor;
+    Color fgColor;
+
+    if (isOverdue) {
+      bgColor = colorScheme.error.withValues(alpha: 0.1);
+      fgColor = colorScheme.error;
+    } else if (isAssignee) {
+      bgColor = colorScheme.tertiary.withValues(alpha: 0.1);
+      fgColor = colorScheme.tertiary;
+    } else {
+      bgColor = colorScheme.primary.withValues(alpha: 0.1);
+      fgColor = colorScheme.primary;
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: isOverdue
-            ? colorScheme.error.withValues(alpha: 0.1)
-            : colorScheme.primary.withValues(alpha: 0.1),
+        color: bgColor,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -395,14 +453,14 @@ class _InfoChip extends StatelessWidget {
           Icon(
             icon,
             size: 14,
-            color: isOverdue ? colorScheme.error : colorScheme.primary,
+            color: fgColor,
           ),
           const SizedBox(width: 4),
           Text(
             label,
             style: TextStyle(
               fontSize: 12,
-              color: isOverdue ? colorScheme.error : colorScheme.primary,
+              color: fgColor,
               fontWeight: FontWeight.w500,
             ),
           ),

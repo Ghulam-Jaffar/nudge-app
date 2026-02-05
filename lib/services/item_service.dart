@@ -63,6 +63,7 @@ class ItemService {
     String? timezone,
     ItemPriority priority = ItemPriority.none,
     String? repeatRule,
+    String? assignedToUid,
   }) async {
     try {
       final now = DateTime.now();
@@ -84,9 +85,18 @@ class ItemService {
         notifyStatus: remindAt != null ? NotifyStatus.scheduled : NotifyStatus.none,
         priority: priority,
         repeatRule: repeatRule,
+        assignedToUid: assignedToUid,
+        viewedBy: [createdByUid], // Creator has viewed it
       );
 
-      await _itemsCollection.doc(itemId).set(item.toMap());
+      // Use batch to create item and update space itemCount
+      final batch = _firestore.batch();
+      batch.set(_itemsCollection.doc(itemId), item.toMap());
+      batch.update(_firestore.collection('spaces').doc(spaceId), {
+        'itemCount': FieldValue.increment(1),
+      });
+      await batch.commit();
+
       return item;
     } catch (e) {
       debugPrint('Error creating space item: $e');
@@ -106,6 +116,8 @@ class ItemService {
     ItemPriority? priority,
     String? repeatRule,
     bool clearRepeatRule = false,
+    String? assignedToUid,
+    bool clearAssignedTo = false,
   }) async {
     try {
       final Map<String, dynamic> updates = {
@@ -130,6 +142,12 @@ class ItemService {
         updates['repeatRule'] = FieldValue.delete();
       } else if (repeatRule != null) {
         updates['repeatRule'] = repeatRule;
+      }
+
+      if (clearAssignedTo) {
+        updates['assignedToUid'] = FieldValue.delete();
+      } else if (assignedToUid != null) {
+        updates['assignedToUid'] = assignedToUid;
       }
 
       await _itemsCollection.doc(itemId).update(updates);
@@ -168,12 +186,35 @@ class ItemService {
   }
 
   /// Delete an item
-  Future<bool> deleteItem(String itemId) async {
+  Future<bool> deleteItem(String itemId, {String? spaceId}) async {
     try {
-      await _itemsCollection.doc(itemId).delete();
+      if (spaceId != null) {
+        // Use batch to delete item and decrement space itemCount
+        final batch = _firestore.batch();
+        batch.delete(_itemsCollection.doc(itemId));
+        batch.update(_firestore.collection('spaces').doc(spaceId), {
+          'itemCount': FieldValue.increment(-1),
+        });
+        await batch.commit();
+      } else {
+        await _itemsCollection.doc(itemId).delete();
+      }
       return true;
     } catch (e) {
       debugPrint('Error deleting item: $e');
+      return false;
+    }
+  }
+
+  /// Mark an item as viewed by a user
+  Future<bool> markAsViewed(String itemId, String uid) async {
+    try {
+      await _itemsCollection.doc(itemId).update({
+        'viewedBy': FieldValue.arrayUnion([uid]),
+      });
+      return true;
+    } catch (e) {
+      debugPrint('Error marking item as viewed: $e');
       return false;
     }
   }

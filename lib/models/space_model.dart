@@ -56,6 +56,7 @@ class Space extends Equatable {
   final DateTime createdAt;
   final DateTime updatedAt;
   final int memberCount;
+  final int itemCount;
   final Map<String, SpaceMember> members;
 
   const Space({
@@ -66,6 +67,7 @@ class Space extends Equatable {
     required this.createdAt,
     required this.updatedAt,
     this.memberCount = 1,
+    this.itemCount = 0,
     this.members = const {},
   });
 
@@ -88,6 +90,7 @@ class Space extends Equatable {
       updatedAt:
           (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       memberCount: data['memberCount'] as int? ?? 1,
+      itemCount: data['itemCount'] as int? ?? 0,
       members: members,
     );
   }
@@ -101,6 +104,7 @@ class Space extends Equatable {
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
       'memberCount': memberCount,
+      'itemCount': itemCount,
       'members': members.map((uid, member) => MapEntry(uid, member.toMap())),
     };
   }
@@ -113,6 +117,7 @@ class Space extends Equatable {
     DateTime? createdAt,
     DateTime? updatedAt,
     int? memberCount,
+    int? itemCount,
     Map<String, SpaceMember>? members,
   }) {
     return Space(
@@ -123,6 +128,7 @@ class Space extends Equatable {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       memberCount: memberCount ?? this.memberCount,
+      itemCount: itemCount ?? this.itemCount,
       members: members ?? this.members,
     );
   }
@@ -144,6 +150,7 @@ class Space extends Equatable {
         createdAt,
         updatedAt,
         memberCount,
+        itemCount,
         members,
       ];
 }

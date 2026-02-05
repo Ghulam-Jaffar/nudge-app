@@ -26,6 +26,8 @@ class ReminderItem extends Equatable {
   final String? notifyJobId;
   final ItemPriority priority;
   final String? repeatRule; // 'none', 'daily', 'weekly'
+  final String? assignedToUid; // User assigned to this item (for space items)
+  final List<String> viewedBy; // UIDs of users who have viewed this item
 
   const ReminderItem({
     required this.itemId,
@@ -46,6 +48,8 @@ class ReminderItem extends Equatable {
     this.notifyJobId,
     this.priority = ItemPriority.none,
     this.repeatRule,
+    this.assignedToUid,
+    this.viewedBy = const [],
   });
 
   factory ReminderItem.fromFirestore(DocumentSnapshot doc) {
@@ -77,6 +81,8 @@ class ReminderItem extends Equatable {
         orElse: () => ItemPriority.none,
       ),
       repeatRule: data['repeatRule'] as String?,
+      assignedToUid: data['assignedToUid'] as String?,
+      viewedBy: (data['viewedBy'] as List<dynamic>?)?.cast<String>() ?? [],
     );
   }
 
@@ -100,6 +106,8 @@ class ReminderItem extends Equatable {
       if (notifyJobId != null) 'notifyJobId': notifyJobId,
       'priority': priority.name,
       if (repeatRule != null) 'repeatRule': repeatRule,
+      if (assignedToUid != null) 'assignedToUid': assignedToUid,
+      'viewedBy': viewedBy,
     };
   }
 
@@ -122,6 +130,8 @@ class ReminderItem extends Equatable {
     String? notifyJobId,
     ItemPriority? priority,
     String? repeatRule,
+    String? assignedToUid,
+    List<String>? viewedBy,
   }) {
     return ReminderItem(
       itemId: itemId ?? this.itemId,
@@ -142,6 +152,8 @@ class ReminderItem extends Equatable {
       notifyJobId: notifyJobId ?? this.notifyJobId,
       priority: priority ?? this.priority,
       repeatRule: repeatRule ?? this.repeatRule,
+      assignedToUid: assignedToUid ?? this.assignedToUid,
+      viewedBy: viewedBy ?? this.viewedBy,
     );
   }
 
@@ -165,5 +177,7 @@ class ReminderItem extends Equatable {
         notifyJobId,
         priority,
         repeatRule,
+        assignedToUid,
+        viewedBy,
       ];
 }

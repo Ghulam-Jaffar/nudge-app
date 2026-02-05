@@ -306,33 +306,9 @@ class _SpaceMembersSheetState extends ConsumerState<SpaceMembersSheet> {
                                 )
                               : null,
                         ),
-                        title: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                user?.displayName ?? 'Loading...',
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            if (isCurrentUser)
-                              Container(
-                                margin: const EdgeInsets.only(left: 8),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: colorScheme.primaryContainer,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  'You',
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    color: colorScheme.onPrimaryContainer,
-                                  ),
-                                ),
-                              ),
-                          ],
+                        title: Text(
+                          user?.displayName ?? 'Loading...',
+                          overflow: TextOverflow.ellipsis,
                         ),
                         subtitle: Text(
                           user != null ? '@${user.handle}' : '',
@@ -346,6 +322,25 @@ class _SpaceMembersSheetState extends ConsumerState<SpaceMembersSheet> {
                             : Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
+                                  if (isCurrentUser)
+                                    Container(
+                                      margin: const EdgeInsets.only(right: 8),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: colorScheme.tertiaryContainer,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        'You',
+                                        style: theme.textTheme.labelSmall?.copyWith(
+                                          color: colorScheme.onTertiaryContainer,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
                                   _RoleBadge(role: member.role),
                                   if (canModify) ...[
                                     const SizedBox(width: 8),

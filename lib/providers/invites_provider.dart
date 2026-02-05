@@ -22,3 +22,16 @@ final pendingInvitesCountProvider = Provider<int>((ref) {
   final invites = ref.watch(pendingInvitesProvider).value ?? [];
   return invites.length;
 });
+
+/// Provider for streaming all invites for a specific space (for activity view)
+final spaceInvitesProvider = StreamProvider.family<List<SpaceInvite>, String>((ref, spaceId) {
+  final firestore = ref.watch(firestoreProvider);
+  return firestore
+      .collection('spaceInvites')
+      .where('spaceId', isEqualTo: spaceId)
+      .orderBy('createdAt', descending: true)
+      .limit(50)
+      .snapshots()
+      .map((snapshot) =>
+          snapshot.docs.map((doc) => SpaceInvite.fromFirestore(doc)).toList());
+});

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../models/item_model.dart';
+import '../../models/user_model.dart';
 import '../../providers/providers.dart';
 
 class ItemEditorSheet extends ConsumerStatefulWidget {
@@ -43,9 +44,12 @@ class _ItemEditorSheetState extends ConsumerState<ItemEditorSheet> {
   TimeOfDay? _remindTime;
   ItemPriority _priority = ItemPriority.none;
   String? _repeatRule;
+  String? _assignedToUid;
   bool _isLoading = false;
 
   bool get _isEditing => widget.item != null;
+  bool get _isSpaceItem => widget.spaceId != null || widget.item?.spaceId != null;
+  String? get _effectiveSpaceId => widget.spaceId ?? widget.item?.spaceId;
 
   @override
   void initState() {
@@ -59,6 +63,21 @@ class _ItemEditorSheetState extends ConsumerState<ItemEditorSheet> {
       }
       _priority = widget.item!.priority;
       _repeatRule = widget.item!.repeatRule;
+      _assignedToUid = widget.item!.assignedToUid;
+
+      // Mark as viewed when opening for editing
+      _markAsViewed();
+    }
+  }
+
+  Future<void> _markAsViewed() async {
+    final user = ref.read(currentUserProvider);
+    if (user == null || widget.item == null) return;
+
+    // Only mark as viewed for space items
+    if (widget.item!.type == ItemType.space && !widget.item!.viewedBy.contains(user.uid)) {
+      final itemService = ref.read(itemServiceProvider);
+      await itemService.markAsViewed(widget.item!.itemId, user.uid);
     }
   }
 
@@ -135,68 +154,76 @@ class _ItemEditorSheetState extends ConsumerState<ItemEditorSheet> {
     bool success = false;
     ReminderItem? resultItem;
 
-    if (_isEditing) {
-      // Update existing item
-      success = await itemService.updateItem(
-        itemId: widget.item!.itemId,
-        updatedByUid: user.uid,
-        title: _titleController.text.trim(),
-        details: _detailsController.text.trim().isEmpty
-            ? null
-            : _detailsController.text.trim(),
-        remindAt: combinedDateTime,
-        clearRemindAt: combinedDateTime == null && widget.item!.remindAt != null,
-        priority: _priority,
-        repeatRule: _repeatRule,
-        clearRepeatRule: _repeatRule == null && widget.item!.repeatRule != null,
-      );
+    try {
+      if (_isEditing) {
+        // Update existing item
+        success = await itemService.updateItem(
+          itemId: widget.item!.itemId,
+          updatedByUid: user.uid,
+          title: _titleController.text.trim(),
+          details: _detailsController.text.trim().isEmpty
+              ? null
+              : _detailsController.text.trim(),
+          remindAt: combinedDateTime,
+          clearRemindAt: combinedDateTime == null && widget.item!.remindAt != null,
+          priority: _priority,
+          repeatRule: _repeatRule,
+          clearRepeatRule: _repeatRule == null && widget.item!.repeatRule != null,
+          assignedToUid: _assignedToUid,
+          clearAssignedTo: _assignedToUid == null && widget.item!.assignedToUid != null,
+        );
 
-      if (success) {
-        // Update notification
-        await notificationService.cancelItemNotification(widget.item!.itemId);
-        if (combinedDateTime != null) {
-          final updatedItem = widget.item!.copyWith(
+        if (success) {
+          // Update notification
+          await notificationService.cancelItemNotification(widget.item!.itemId);
+          if (combinedDateTime != null) {
+            final updatedItem = widget.item!.copyWith(
+              title: _titleController.text.trim(),
+              remindAt: combinedDateTime,
+              priority: _priority,
+              repeatRule: _repeatRule,
+            );
+            await notificationService.scheduleItemNotification(updatedItem);
+          }
+        }
+      } else {
+        // Create new item
+        if (widget.spaceId != null) {
+          resultItem = await itemService.createSpaceItem(
+            spaceId: widget.spaceId!,
+            createdByUid: user.uid,
             title: _titleController.text.trim(),
+            details: _detailsController.text.trim().isEmpty
+                ? null
+                : _detailsController.text.trim(),
+            remindAt: combinedDateTime,
+            priority: _priority,
+            repeatRule: _repeatRule,
+            assignedToUid: _assignedToUid,
+          );
+        } else {
+          resultItem = await itemService.createPersonalItem(
+            ownerUid: user.uid,
+            title: _titleController.text.trim(),
+            details: _detailsController.text.trim().isEmpty
+                ? null
+                : _detailsController.text.trim(),
             remindAt: combinedDateTime,
             priority: _priority,
             repeatRule: _repeatRule,
           );
-          await notificationService.scheduleItemNotification(updatedItem);
+        }
+
+        success = resultItem != null;
+
+        // Schedule notification for new item
+        if (resultItem != null && combinedDateTime != null) {
+          await notificationService.scheduleItemNotification(resultItem);
         }
       }
-    } else {
-      // Create new item
-      if (widget.spaceId != null) {
-        resultItem = await itemService.createSpaceItem(
-          spaceId: widget.spaceId!,
-          createdByUid: user.uid,
-          title: _titleController.text.trim(),
-          details: _detailsController.text.trim().isEmpty
-              ? null
-              : _detailsController.text.trim(),
-          remindAt: combinedDateTime,
-          priority: _priority,
-          repeatRule: _repeatRule,
-        );
-      } else {
-        resultItem = await itemService.createPersonalItem(
-          ownerUid: user.uid,
-          title: _titleController.text.trim(),
-          details: _detailsController.text.trim().isEmpty
-              ? null
-              : _detailsController.text.trim(),
-          remindAt: combinedDateTime,
-          priority: _priority,
-          repeatRule: _repeatRule,
-        );
-      }
-
-      success = resultItem != null;
-
-      // Schedule notification for new item
-      if (resultItem != null && combinedDateTime != null) {
-        await notificationService.scheduleItemNotification(resultItem);
-      }
+    } catch (e) {
+      debugPrint('Error saving item: $e');
+      success = false;
     }
 
     if (!mounted) return;
@@ -247,7 +274,7 @@ class _ItemEditorSheetState extends ConsumerState<ItemEditorSheet> {
     final notificationService = ref.read(localNotificationServiceProvider);
 
     await notificationService.cancelItemNotification(widget.item!.itemId);
-    final success = await itemService.deleteItem(widget.item!.itemId);
+    final success = await itemService.deleteItem(widget.item!.itemId, spaceId: widget.item!.spaceId);
 
     if (!mounted) return;
 
@@ -489,6 +516,24 @@ class _ItemEditorSheetState extends ConsumerState<ItemEditorSheet> {
                               },
                       ),
 
+                      // Assign to (only for space items)
+                      if (_isSpaceItem && _effectiveSpaceId != null) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          'Assign To',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _AssigneePicker(
+                          spaceId: _effectiveSpaceId!,
+                          selectedUid: _assignedToUid,
+                          isLoading: _isLoading,
+                          onChanged: (uid) => setState(() => _assignedToUid = uid),
+                        ),
+                      ],
+
                       // Delete button (only for editing)
                       if (_isEditing) ...[
                         const SizedBox(height: 32),
@@ -515,6 +560,165 @@ class _ItemEditorSheetState extends ConsumerState<ItemEditorSheet> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _AssigneePicker extends ConsumerStatefulWidget {
+  final String spaceId;
+  final String? selectedUid;
+  final bool isLoading;
+  final ValueChanged<String?> onChanged;
+
+  const _AssigneePicker({
+    required this.spaceId,
+    required this.selectedUid,
+    required this.isLoading,
+    required this.onChanged,
+  });
+
+  @override
+  ConsumerState<_AssigneePicker> createState() => _AssigneePickerState();
+}
+
+class _AssigneePickerState extends ConsumerState<_AssigneePicker> {
+  final Map<String, AppUser?> _memberUsers = {};
+  bool _isLoadingMembers = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMembers();
+  }
+
+  Future<void> _loadMembers() async {
+    final spaceAsync = ref.read(spaceProvider(widget.spaceId));
+    final space = spaceAsync.valueOrNull;
+    if (space == null) {
+      setState(() => _isLoadingMembers = false);
+      return;
+    }
+
+    final userService = ref.read(userServiceProvider);
+    for (final uid in space.members.keys) {
+      final user = await userService.getUser(uid);
+      if (mounted) {
+        setState(() {
+          _memberUsers[uid] = user;
+        });
+      }
+    }
+
+    if (mounted) {
+      setState(() => _isLoadingMembers = false);
+    }
+  }
+
+  void _showMemberPicker() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final currentUser = ref.read(currentUserProvider);
+
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: colorScheme.outline.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'Assign To',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const Divider(),
+            // No one option
+            ListTile(
+              leading: CircleAvatar(
+                backgroundColor: colorScheme.surfaceContainerHighest,
+                child: Icon(Icons.person_off_outlined, color: colorScheme.onSurface),
+              ),
+              title: const Text('No one'),
+              trailing: widget.selectedUid == null
+                  ? Icon(Icons.check_rounded, color: colorScheme.primary)
+                  : null,
+              onTap: () {
+                widget.onChanged(null);
+                Navigator.pop(context);
+              },
+            ),
+            // Member list
+            ...(_memberUsers.entries.map((entry) {
+              final uid = entry.key;
+              final user = entry.value;
+              final isCurrentUser = uid == currentUser?.uid;
+              final isSelected = widget.selectedUid == uid;
+
+              return ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: colorScheme.primaryContainer,
+                  backgroundImage: user?.photoUrl != null
+                      ? NetworkImage(user!.photoUrl!)
+                      : null,
+                  child: user?.photoUrl == null
+                      ? Icon(Icons.person_rounded, color: colorScheme.primary)
+                      : null,
+                ),
+                title: Text(user?.displayName ?? 'Unknown'),
+                subtitle: Text(isCurrentUser ? 'You' : '@${user?.handle ?? uid}'),
+                trailing: isSelected
+                    ? Icon(Icons.check_rounded, color: colorScheme.primary)
+                    : null,
+                onTap: () {
+                  widget.onChanged(uid);
+                  Navigator.pop(context);
+                },
+              );
+            }).toList()),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentUser = ref.watch(currentUserProvider);
+
+    String buttonText = 'No one';
+    if (widget.selectedUid != null) {
+      final user = _memberUsers[widget.selectedUid];
+      if (user != null) {
+        buttonText = widget.selectedUid == currentUser?.uid
+            ? 'Me'
+            : user.displayName;
+      } else {
+        buttonText = 'Selected';
+      }
+    }
+
+    return OutlinedButton.icon(
+      onPressed: widget.isLoading || _isLoadingMembers ? null : _showMemberPicker,
+      icon: const Icon(Icons.person_outline_rounded),
+      label: _isLoadingMembers
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Text(buttonText),
     );
   }
 }
