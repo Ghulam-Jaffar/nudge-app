@@ -1,4 +1,4 @@
-# shared_reminder_app
+# nudge-app
 
 A new Flutter project.
 
