@@ -40,7 +40,7 @@ class AuthService {
     GoogleSignIn? googleSignIn,
   })  : _auth = auth ?? FirebaseAuth.instance,
         _googleSignIn = googleSignIn ?? GoogleSignIn(
-          serverClientId: '951730653228-4qgh9b5a0jngscebnsemflaq7lsmaqoo.apps.googleusercontent.com',
+          serverClientId: '951730653228-a43sjtjd10qi44mjmr20ppcaal5m32as.apps.googleusercontent.com',
         );
 
   User? get currentUser => _auth.currentUser;
