@@ -57,3 +57,8 @@ lib/firebase_options.dart
 # Environment variables
 .env
 .env.local
+
+# Claude Code
+.claude/
+CLAUDE.md
+nul
