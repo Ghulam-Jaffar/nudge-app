@@ -321,8 +321,11 @@ class ItemCard extends ConsumerWidget {
           return false; // Don't dismiss, just toggle
         } else {
           // Swipe left to delete
-          final result = await _handleDelete(context, ref);
-          return result;
+          // Return false to prevent Dismissible from animating - the Firestore
+          // stream will remove the item from the list, avoiding a race condition
+          // where the widget gets disposed mid-animation.
+          await _handleDelete(context, ref);
+          return false;
         }
       },
       onDismissed: (direction) {

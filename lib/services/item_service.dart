@@ -222,7 +222,17 @@ class ItemService {
   /// Restore a deleted item (for undo)
   Future<bool> restoreItem(ReminderItem item) async {
     try {
-      await _itemsCollection.doc(item.itemId).set(item.toMap());
+      if (item.spaceId != null) {
+        // Use batch to restore item and increment space itemCount
+        final batch = _firestore.batch();
+        batch.set(_itemsCollection.doc(item.itemId), item.toMap());
+        batch.update(_firestore.collection('spaces').doc(item.spaceId!), {
+          'itemCount': FieldValue.increment(1),
+        });
+        await batch.commit();
+      } else {
+        await _itemsCollection.doc(item.itemId).set(item.toMap());
+      }
       return true;
     } catch (e) {
       debugPrint('Error restoring item: $e');

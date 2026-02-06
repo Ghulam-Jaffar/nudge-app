@@ -27,6 +27,14 @@
       ]
     },
     {
+      "collectionGroup": "spaceActivities",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "spaceId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "spaceInvites",
       "queryScope": "COLLECTION",
       "fields": [

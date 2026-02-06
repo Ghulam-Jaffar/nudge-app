@@ -100,6 +100,15 @@ service cloud.firestore {
     }
 
     // ============================================
+    // SPACE ACTIVITIES COLLECTION
+    // ============================================
+    match /spaceActivities/{activityId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if false;
+    }
+
+    // ============================================
     // SPACE INVITES COLLECTION
     // ============================================
     match /spaceInvites/{inviteId} {
