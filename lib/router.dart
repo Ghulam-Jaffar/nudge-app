@@ -21,6 +21,7 @@ final _shellNavigatorKey = GlobalKey<NavigatorState>();
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
   final hasProfile = ref.watch(hasCompletedProfileProvider);
+  final isProfileLoading = ref.watch(isProfileLoadingProvider);
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
@@ -32,9 +33,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isLoggingIn = state.uri.path.startsWith('/auth');
       final isOnLoading = state.uri.path == '/loading';
 
-      // Show loading screen while checking auth state
-      if (isLoading && !isOnLoading) {
+      // Show loading screen while checking auth state OR profile is loading
+      if ((isLoading || (isLoggedIn && isProfileLoading)) && !isOnLoading) {
         return '/loading';
+      }
+
+      // Stay on loading screen if profile is still loading
+      if (isOnLoading && isLoggedIn && isProfileLoading) {
+        return null;
       }
 
       // Once loaded, redirect away from loading screen

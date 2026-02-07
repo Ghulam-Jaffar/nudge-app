@@ -27,3 +27,9 @@ final hasCompletedProfileProvider = Provider<bool>((ref) {
   final appUser = ref.watch(appUserProvider);
   return appUser != null && appUser.handle.isNotEmpty;
 });
+
+/// True while the user doc stream hasn't emitted its first value yet.
+final isProfileLoadingProvider = Provider<bool>((ref) {
+  final userDoc = ref.watch(userDocProvider);
+  return userDoc.isLoading;
+});
