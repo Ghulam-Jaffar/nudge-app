@@ -11,7 +11,7 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 const messaging = admin.messaging();
 
-const CRON_SECRET = process.env.CRON_SECRET || '';
+const CRON_SECRET = process.env.CRON_SECRET || 'nudge-cron-2026-xyz';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST' && req.method !== 'GET') {
