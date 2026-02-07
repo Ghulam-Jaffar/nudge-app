@@ -76,7 +76,7 @@ class ItemCard extends ConsumerWidget {
     }
   }
 
-  Future<void> _handleComplete(WidgetRef ref, bool value) async {
+  void _handleComplete(WidgetRef ref, bool value) {
     final user = ref.read(currentUserProvider);
     if (user == null) return;
 
@@ -85,7 +85,8 @@ class ItemCard extends ConsumerWidget {
     final itemService = ref.read(itemServiceProvider);
     final notificationService = ref.read(localNotificationServiceProvider);
 
-    await itemService.toggleComplete(
+    // Fire-and-forget for optimistic UI — Firestore stream updates the list
+    itemService.toggleComplete(
       itemId: item.itemId,
       updatedByUid: user.uid,
       isCompleted: value,
@@ -93,12 +94,11 @@ class ItemCard extends ConsumerWidget {
       itemTitle: item.title,
     );
 
-    // Cancel notification if completed
+    // Best-effort notification management
     if (value) {
-      await notificationService.cancelItemNotification(item.itemId);
+      notificationService.cancelItemNotification(item.itemId);
     } else if (item.remindAt != null && item.remindAt!.isAfter(DateTime.now())) {
-      // Reschedule notification if uncompleted and has future remind time
-      await notificationService.scheduleItemNotification(
+      notificationService.scheduleItemNotification(
         item.copyWith(isCompleted: false),
       );
     }
@@ -400,7 +400,7 @@ class ItemCard extends ConsumerWidget {
       confirmDismiss: (direction) async {
         if (direction == DismissDirection.startToEnd) {
           // Swipe right to complete/uncomplete
-          await _handleComplete(ref, !item.isCompleted);
+          _handleComplete(ref, !item.isCompleted);
           return false; // Don't dismiss, just toggle
         } else {
           // Swipe left to delete
