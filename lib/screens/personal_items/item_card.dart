@@ -104,63 +104,67 @@ class ItemCard extends ConsumerWidget {
     }
   }
 
-  Future<bool> _handleDelete(BuildContext context, WidgetRef ref) async {
+  Future<void> _handleDelete(BuildContext context, WidgetRef ref) async {
     final user = ref.read(currentUserProvider);
-    if (user == null) return false;
+    if (user == null) return;
 
     HapticFeedback.mediumImpact();
 
     final itemService = ref.read(itemServiceProvider);
     final notificationService = ref.read(localNotificationServiceProvider);
 
-    // Store item for undo before deleting
+    // Store item for undo
     final deletedItem = item;
+
+    // Show snackbar FIRST (before deleting)
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).clearSnackBars();
+
+    bool undoPressed = false;
+    final snackbarController = ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Deleted "${item.title}"'),
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () async {
+            undoPressed = true;
+            // Restore the item
+            final restored = await itemService.restoreItem(
+              deletedItem,
+              actorUid: user.uid,
+            );
+            if (restored) {
+              // Reschedule notification if needed
+              if (deletedItem.remindAt != null &&
+                  deletedItem.remindAt!.isAfter(DateTime.now()) &&
+                  !deletedItem.isCompleted) {
+                await notificationService.scheduleItemNotification(deletedItem);
+              }
+            }
+          },
+        ),
+      ),
+    );
+
+    // Small delay to ensure snackbar is mounted, then delete from Firestore
+    await Future.delayed(const Duration(milliseconds: 100));
 
     try {
       await notificationService.cancelItemNotification(item.itemId);
-      final success = await itemService.deleteItem(
+      await itemService.deleteItem(
         item.itemId,
         spaceId: item.spaceId,
         actorUid: user.uid,
         itemTitle: item.title,
       );
 
-      if (success && context.mounted) {
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Deleted "${item.title}"'),
-            duration: const Duration(seconds: 5),
-            action: SnackBarAction(
-              label: 'Undo',
-              onPressed: () async {
-                // Restore the item
-                final restored = await itemService.restoreItem(
-                  deletedItem,
-                  actorUid: user.uid,
-                );
-                if (restored && context.mounted) {
-                  // Reschedule notification if needed
-                  if (deletedItem.remindAt != null &&
-                      deletedItem.remindAt!.isAfter(DateTime.now()) &&
-                      !deletedItem.isCompleted) {
-                    await notificationService.scheduleItemNotification(deletedItem);
-                  }
-                }
-              },
-            ),
-          ),
-        );
-      } else if (!success && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Failed to delete item'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
+      // Wait for snackbar to close, if undo was pressed, restore
+      final reason = await snackbarController.closed;
+      if (undoPressed && reason == SnackBarClosedReason.action) {
+        // Already handled in onPressed
+        return;
       }
-
-      return success;
     } catch (e) {
       debugPrint('Error deleting item: $e');
       if (context.mounted) {
@@ -171,7 +175,6 @@ class ItemCard extends ConsumerWidget {
           ),
         );
       }
-      return false;
     }
   }
 
@@ -393,9 +396,9 @@ class ItemCard extends ConsumerWidget {
               _handleComplete(ref, !item.isCompleted);
               return false; // Don't dismiss, just toggle
             } else {
-              // Swipe left to delete
+              // Swipe left to delete - keep in UI, deletion will be handled by StreamProvider
               await _handleDelete(context, ref);
-              return false;
+              return false; // Don't dismiss from UI, let Firestore deletion handle it
             }
           },
           onDismissed: (direction) {
