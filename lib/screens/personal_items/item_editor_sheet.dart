@@ -180,20 +180,6 @@ class _ItemEditorSheetState extends ConsumerState<ItemEditorSheet> {
           clearAssignedTo: _assignedToUid == null && widget.item!.assignedToUid != null,
           spaceId: _effectiveSpaceId,
         );
-
-        if (success) {
-          // Update notification
-          await notificationService.cancelItemNotification(widget.item!.itemId);
-          if (combinedDateTime != null) {
-            final updatedItem = widget.item!.copyWith(
-              title: _titleController.text.trim(),
-              remindAt: combinedDateTime,
-              priority: _priority,
-              repeatRule: _repeatRule,
-            );
-            await notificationService.scheduleItemNotification(updatedItem);
-          }
-        }
       } else {
         // Create new item
         if (widget.spaceId != null) {
@@ -223,15 +209,32 @@ class _ItemEditorSheetState extends ConsumerState<ItemEditorSheet> {
         }
 
         success = resultItem != null;
-
-        // Schedule notification for new item
-        if (resultItem != null && combinedDateTime != null) {
-          await notificationService.scheduleItemNotification(resultItem);
-        }
       }
     } catch (e) {
       debugPrint('Error saving item: $e');
       success = false;
+    }
+
+    // Schedule notifications best-effort (outside main try/catch so failures don't affect success)
+    if (success) {
+      try {
+        if (_isEditing) {
+          await notificationService.cancelItemNotification(widget.item!.itemId);
+          if (combinedDateTime != null) {
+            final updatedItem = widget.item!.copyWith(
+              title: _titleController.text.trim(),
+              remindAt: combinedDateTime,
+              priority: _priority,
+              repeatRule: _repeatRule,
+            );
+            await notificationService.scheduleItemNotification(updatedItem);
+          }
+        } else if (resultItem != null && combinedDateTime != null) {
+          await notificationService.scheduleItemNotification(resultItem);
+        }
+      } catch (e) {
+        debugPrint('Error scheduling notification: $e');
+      }
     }
 
     if (!mounted) return;
@@ -284,7 +287,6 @@ class _ItemEditorSheetState extends ConsumerState<ItemEditorSheet> {
 
     bool success = false;
     try {
-      await notificationService.cancelItemNotification(widget.item!.itemId);
       success = await itemService.deleteItem(
         widget.item!.itemId,
         spaceId: widget.item!.spaceId,
@@ -293,6 +295,15 @@ class _ItemEditorSheetState extends ConsumerState<ItemEditorSheet> {
       );
     } catch (e) {
       debugPrint('Error deleting item: $e');
+    }
+
+    // Best-effort notification cleanup
+    if (success) {
+      try {
+        await notificationService.cancelItemNotification(widget.item!.itemId);
+      } catch (e) {
+        debugPrint('Error cancelling notification: $e');
+      }
     }
 
     if (!mounted) return;

@@ -108,6 +108,14 @@ class FCMService {
         importance: Importance.high,
       );
       await androidPlugin.createNotificationChannel(remindersChannel);
+
+      const nudgesChannel = AndroidNotificationChannel(
+        'nudges',
+        'Nudges',
+        description: 'Notifications when someone nudges you',
+        importance: Importance.high,
+      );
+      await androidPlugin.createNotificationChannel(nudgesChannel);
     }
   }
 

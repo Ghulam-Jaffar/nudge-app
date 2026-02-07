@@ -58,9 +58,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (spaceDoc.exists) {
           const space = spaceDoc.data()!;
           const title = `${space.emoji || ''} ${space.name}`.trim();
-          const memberIds = Object.keys(space.members || {});
-          for (const uid of memberIds) {
-            await sendToUser(uid, title, item.title, { type: 'space', itemId: item.itemId, spaceId: item.spaceId });
+          const data = { type: 'space', itemId: item.itemId, spaceId: item.spaceId };
+
+          if (item.assignedToUid) {
+            // Assigned item: notify only the assignee
+            await sendToUser(item.assignedToUid, title, item.title, data);
+          } else {
+            // Unassigned item: notify all space members
+            const memberIds = Object.keys(space.members || {});
+            for (const uid of memberIds) {
+              await sendToUser(uid, title, item.title, data);
+            }
           }
           sent++;
         }
