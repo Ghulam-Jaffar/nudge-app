@@ -13,7 +13,7 @@ class PingService {
   CollectionReference<Map<String, dynamic>> get _pingsCollection =>
       _firestore.collection('pings');
 
-  /// Create a ping (nudge). Returns null if rate-limited or error.
+  /// Create a ping (nudge). Returns null on error.
   Future<Ping?> createPing({
     required String spaceId,
     required String itemId,
@@ -22,20 +22,6 @@ class PingService {
     required String toUid,
   }) async {
     try {
-      // Rate-limit check: same sender + item within 1 hour
-      final oneHourAgo = DateTime.now().subtract(const Duration(hours: 1));
-      final recentPings = await _pingsCollection
-          .where('fromUid', isEqualTo: fromUid)
-          .where('itemId', isEqualTo: itemId)
-          .where('createdAt', isGreaterThan: Timestamp.fromDate(oneHourAgo))
-          .limit(1)
-          .get();
-
-      if (recentPings.docs.isNotEmpty) {
-        debugPrint('Ping rate-limited: already pinged this item within 1 hour');
-        return null;
-      }
-
       final pingId = _uuid.v4();
       final now = DateTime.now();
 

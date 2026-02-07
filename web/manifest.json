@@ -1,11 +1,11 @@
 {
-    "name": "shared_reminder_app",
-    "short_name": "shared_reminder_app",
+    "name": "Nudge — Social Reminders",
+    "short_name": "Nudge",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Create personal reminders and shared spaces where friends collaborate and stay on track together.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

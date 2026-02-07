@@ -315,7 +315,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Already nudged recently. Try again later.'),
+            content: Text('Failed to send nudge. Try again.'),
           ),
         );
       }
