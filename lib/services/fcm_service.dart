@@ -181,7 +181,6 @@ class FCMService {
     debugPrint('Foreground message received: ${message.messageId}');
 
     final notification = message.notification;
-    final android = message.notification?.android;
 
     // Show local notification for foreground messages
     if (notification != null) {
@@ -196,7 +195,7 @@ class FCMService {
             channelDescription: 'Notifications for shared space reminders',
             importance: Importance.high,
             priority: Priority.high,
-            icon: android?.smallIcon ?? '@mipmap/ic_launcher',
+            icon: '@drawable/ic_notification',
           ),
           iOS: const DarwinNotificationDetails(
             presentAlert: true,

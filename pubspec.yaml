@@ -2,7 +2,7 @@ name: nudge_app
 description: "Nudge - A social reminder app for Gen Z. Create personal reminders and shared lists where everyone gets notified."
 publish_to: 'none'
 
-version: 1.3.1+5
+version: 1.4.0+6
 
 environment:
   sdk: ^3.10.7

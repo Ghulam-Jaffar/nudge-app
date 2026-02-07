@@ -218,11 +218,12 @@ class ProfileScreen extends ConsumerWidget {
                         ListTile(
                           leading: const Icon(Icons.notifications_outlined),
                           title: const Text('Notifications'),
-                          trailing: const Icon(Icons.chevron_right_rounded),
+                          subtitle: const Text('Push notifications are enabled'),
+                          trailing: const Icon(Icons.check_circle_rounded, color: Colors.green),
                           onTap: () {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Notification settings coming soon!'),
+                                content: Text('Notifications are managed by your device settings'),
                               ),
                             );
                           },
@@ -252,7 +253,7 @@ class ProfileScreen extends ConsumerWidget {
                   const SizedBox(height: 24),
                   // App info
                   Text(
-                    'Nudge v1.0.0',
+                    'Nudge v1.4.0',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: colorScheme.onSurface.withValues(alpha: 0.4),
                     ),

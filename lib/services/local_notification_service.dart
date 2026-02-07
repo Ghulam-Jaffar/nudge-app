@@ -21,7 +21,7 @@ class LocalNotificationService {
     tz_data.initializeTimeZones();
 
     // Android settings
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings('@drawable/ic_notification');
 
     // iOS settings
     const iosSettings = DarwinInitializationSettings(
@@ -176,7 +176,7 @@ class LocalNotificationService {
       channelDescription: 'Reminder notifications',
       importance: importance,
       priority: priority,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
       enableVibration: true,
       playSound: true,
     );
