@@ -22,7 +22,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const rawSecret = req.headers['x-cron-secret'] || req.query['secret'];
   const secret = Array.isArray(rawSecret) ? rawSecret[0] : rawSecret;
   if (!CRON_SECRET || secret !== CRON_SECRET) {
-    return res.status(401).json({ error: 'Unauthorized' });
+    return res.status(401).json({
+      error: 'Unauthorized',
+      debug: { hasEnv: !!CRON_SECRET, envLength: CRON_SECRET.length, secretReceived: typeof secret, secretLength: String(secret || '').length },
+    });
   }
 
   const now = admin.firestore.Timestamp.now();
