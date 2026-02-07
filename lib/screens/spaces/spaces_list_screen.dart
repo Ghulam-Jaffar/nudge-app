@@ -6,6 +6,8 @@ import '../../models/space_model.dart';
 import '../../providers/providers.dart';
 import 'space_editor_sheet.dart';
 import '../../widgets/skeleton_space_card.dart';
+import '../../utils/error_messages.dart';
+import '../../widgets/mascot_image.dart';
 
 class SpacesListScreen extends ConsumerStatefulWidget {
   const SpacesListScreen({super.key});
@@ -85,32 +87,16 @@ class _SpacesListScreenState extends ConsumerState<SpacesListScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          color: colorScheme.errorContainer.withValues(alpha: 0.3),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.cloud_off_rounded,
-                          size: 50,
-                          color: colorScheme.error,
-                        ),
+                      const MascotImage(
+                        variant: MascotVariant.sad,
+                        size: 100,
+                        fallbackIcon: Icons.cloud_off_rounded,
                       ),
                       const SizedBox(height: 24),
                       Text(
-                        'Oops! Something went wrong',
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Pull down to try again',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onSurface.withValues(alpha: 0.6),
-                        ),
+                        ErrorMessages.friendly(error),
+                        style: theme.textTheme.titleMedium,
+                        textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16),
                       OutlinedButton.icon(
@@ -142,18 +128,10 @@ class _SpacesListScreenState extends ConsumerState<SpacesListScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              color: colorScheme.primaryContainer.withValues(alpha: 0.3),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.group_work_rounded,
-              size: 60,
-              color: colorScheme.primary,
-            ),
+          const MascotImage(
+            variant: MascotVariant.waving,
+            size: 120,
+            fallbackIcon: Icons.group_work_rounded,
           ),
           const SizedBox(height: 24),
           Text(

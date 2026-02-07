@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/invite_model.dart';
 import '../../providers/providers.dart';
+import '../../widgets/mascot_image.dart';
+import '../../utils/error_messages.dart';
 
 class InvitesScreen extends ConsumerStatefulWidget {
   const InvitesScreen({super.key});
@@ -110,10 +112,10 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.mail_outline_rounded,
-                    size: 80,
-                    color: colorScheme.primary.withValues(alpha: 0.5),
+                  const MascotImage(
+                    variant: MascotVariant.happy,
+                    size: 100,
+                    fallbackIcon: Icons.mail_outline_rounded,
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -153,7 +155,22 @@ class _InvitesScreenState extends ConsumerState<InvitesScreen> {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(
-          child: Text('Error loading invitations: $error'),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const MascotImage(
+                variant: MascotVariant.sad,
+                size: 100,
+                fallbackIcon: Icons.cloud_off_rounded,
+              ),
+              const SizedBox(height: 24),
+              Text(
+                ErrorMessages.friendly(error),
+                style: theme.textTheme.titleMedium,
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );

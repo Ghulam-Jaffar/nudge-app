@@ -197,17 +197,7 @@ class ItemCard extends ConsumerWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
-        child: Container(
-          decoration: item.priority != ItemPriority.none
-              ? BoxDecoration(
-                  border: Border(
-                    left: BorderSide(
-                      color: priorityColor.withValues(alpha: 0.6),
-                      width: 3,
-                    ),
-                  ),
-                )
-              : null,
+        child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,

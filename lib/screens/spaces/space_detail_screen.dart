@@ -12,6 +12,8 @@ import 'space_activity_screen.dart';
 import 'space_editor_sheet.dart';
 import 'space_members_sheet.dart';
 import '../../widgets/skeleton_item_card.dart';
+import '../../utils/error_messages.dart';
+import '../../widgets/mascot_image.dart';
 
 class SpaceDetailScreen extends ConsumerStatefulWidget {
   final String spaceId;
@@ -486,7 +488,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                   },
                   loading: () => const SkeletonItemList(),
                   error: (error, stack) => SliverFillRemaining(
-                    child: _buildErrorState(theme, colorScheme),
+                    child: _buildErrorState(theme, colorScheme, error),
                   ),
                 ),
               ],
@@ -514,7 +516,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
             physics: const AlwaysScrollableScrollPhysics(),
             children: [
               SizedBox(height: MediaQuery.of(context).size.height * 0.25),
-              _buildErrorState(theme, colorScheme),
+              _buildErrorState(theme, colorScheme, error),
             ],
           ),
         ),
@@ -522,37 +524,21 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
     );
   }
 
-  Widget _buildErrorState(ThemeData theme, ColorScheme colorScheme) {
+  Widget _buildErrorState(ThemeData theme, ColorScheme colorScheme, [Object? error]) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              color: colorScheme.errorContainer.withValues(alpha: 0.3),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.cloud_off_rounded,
-              size: 50,
-              color: colorScheme.error,
-            ),
+          const MascotImage(
+            variant: MascotVariant.sad,
+            size: 100,
+            fallbackIcon: Icons.cloud_off_rounded,
           ),
           const SizedBox(height: 24),
           Text(
-            'Oops! Something went wrong',
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Pull down to try again',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
+            error != null ? ErrorMessages.friendly(error) : 'Something went wrong. Please try again.',
+            style: theme.textTheme.titleMedium,
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
           OutlinedButton.icon(

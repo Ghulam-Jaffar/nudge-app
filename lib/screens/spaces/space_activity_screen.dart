@@ -5,6 +5,7 @@ import '../../models/activity_model.dart';
 import '../../models/invite_model.dart';
 import '../../models/user_model.dart';
 import '../../providers/providers.dart';
+import '../../widgets/mascot_image.dart';
 
 class SpaceActivityScreen extends ConsumerStatefulWidget {
   final String spaceId;
@@ -147,18 +148,10 @@ class _SpaceActivityScreenState extends ConsumerState<SpaceActivityScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              color: colorScheme.primaryContainer.withValues(alpha: 0.3),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.history_rounded,
-              size: 40,
-              color: colorScheme.primary,
-            ),
+          const MascotImage(
+            variant: MascotVariant.thinking,
+            size: 80,
+            fallbackIcon: Icons.history_rounded,
           ),
           const SizedBox(height: 16),
           Text(
@@ -195,14 +188,14 @@ class _SpaceActivityScreenState extends ConsumerState<SpaceActivityScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.error_outline_rounded,
-            size: 48,
-            color: colorScheme.error,
+          const MascotImage(
+            variant: MascotVariant.sad,
+            size: 80,
+            fallbackIcon: Icons.error_outline_rounded,
           ),
           const SizedBox(height: 16),
           Text(
-            'Something went wrong',
+            'Something went wrong. Please try again.',
             style: theme.textTheme.titleMedium,
           ),
           const SizedBox(height: 8),
