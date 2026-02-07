@@ -205,7 +205,13 @@ class ItemCard extends ConsumerWidget {
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: (item.details != null && item.details!.isNotEmpty) ||
+                    item.remindAt != null ||
+                    item.repeatRule != null ||
+                    item.assignedToUid != null ||
+                    onPing != null
+                ? CrossAxisAlignment.start
+                : CrossAxisAlignment.center,
             children: [
               // Checkbox
               _CompletionCheckbox(
