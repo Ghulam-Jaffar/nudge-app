@@ -4,6 +4,7 @@ import 'providers/providers.dart';
 import 'router.dart';
 import 'services/fcm_service.dart';
 import 'services/local_notification_service.dart';
+import 'services/widget_service.dart';
 import 'theme/app_theme.dart';
 
 class SharedReminderApp extends ConsumerStatefulWidget {
@@ -13,14 +14,44 @@ class SharedReminderApp extends ConsumerStatefulWidget {
   ConsumerState<SharedReminderApp> createState() => _SharedReminderAppState();
 }
 
-class _SharedReminderAppState extends ConsumerState<SharedReminderApp> {
+class _SharedReminderAppState extends ConsumerState<SharedReminderApp>
+    with WidgetsBindingObserver {
   String? _lastRegisteredUid;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _setupNotificationHandler();
     _requestNotificationPermissions();
+    WidgetService.initialize();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Update widget when app comes to foreground or goes to background
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.resumed) {
+      _updateHomeWidget();
+    }
+  }
+
+  void _updateHomeWidget() {
+    final widgetItems = ref.read(widgetItemsProvider);
+    final themeState = ref.read(themeProvider);
+    // Use the pack directly since we can't access BuildContext reliably here
+    final isDark = themeState.pack.isDarkPack;
+    WidgetService.updateWidget(
+      todayItems: widgetItems,
+      themePack: themeState.pack,
+      isDark: isDark,
+    );
   }
 
   Future<void> _requestNotificationPermissions() async {
@@ -69,10 +100,25 @@ class _SharedReminderAppState extends ConsumerState<SharedReminderApp> {
   Widget build(BuildContext context) {
     // Watch auth state and register FCM token when user is authenticated
     ref.listen(currentUserProvider, (prev, next) {
-      if (next != null) _registerFcmTokenIfNeeded();
+      if (next != null) {
+        _registerFcmTokenIfNeeded();
+      } else if (prev != null && next == null) {
+        // User signed out — clear widget
+        WidgetService.clearWidget();
+      }
     });
     // Also check on first build
     _registerFcmTokenIfNeeded();
+
+    // Update home screen widget when items change
+    ref.listen(widgetItemsProvider, (prev, next) {
+      _updateHomeWidget();
+    });
+
+    // Update home screen widget when theme changes
+    ref.listen(themeProvider, (prev, next) {
+      _updateHomeWidget();
+    });
 
     final router = ref.watch(routerProvider);
     final themeState = ref.watch(themeProvider);

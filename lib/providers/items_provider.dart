@@ -62,6 +62,31 @@ final spaceItemsProvider =
           snapshot.docs.map((doc) => ReminderItem.fromFirestore(doc)).toList());
 });
 
+/// Items for the home screen widget: today's + overdue incomplete items
+final widgetItemsProvider = Provider<List<ReminderItem>>((ref) {
+  final items = ref.watch(personalItemsProvider).value ?? [];
+  final now = DateTime.now();
+  final todayStart = DateTime(now.year, now.month, now.day);
+  final todayEnd = todayStart.add(const Duration(days: 1));
+
+  return items.where((item) {
+    // Show completed items from today
+    if (item.isCompleted) {
+      final completedAt = item.completedAt ?? item.updatedAt;
+      return completedAt.isAfter(todayStart) && completedAt.isBefore(todayEnd);
+    }
+    // Show overdue items
+    if (item.remindAt != null && item.remindAt!.isBefore(now)) return true;
+    // Show today's items
+    if (item.remindAt != null &&
+        item.remindAt!.isAfter(todayStart) &&
+        item.remindAt!.isBefore(todayEnd)) return true;
+    // Show items with no date
+    if (item.remindAt == null) return true;
+    return false;
+  }).toList();
+});
+
 /// Count of active (incomplete) items in a space
 final spaceActiveItemCountProvider = Provider.family<int, String>((ref, spaceId) {
   final items = ref.watch(spaceItemsProvider(spaceId)).value ?? [];
