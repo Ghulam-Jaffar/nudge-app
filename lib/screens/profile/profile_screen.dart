@@ -92,8 +92,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         return 'Push notifications are disabled';
       case AuthorizationStatus.notDetermined:
         return 'Tap to enable push notifications';
-      default:
-        return 'Notification status unknown';
     }
   }
 
@@ -114,8 +112,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         return const Icon(Icons.cancel_rounded, color: Colors.red);
       case AuthorizationStatus.notDetermined:
         return const Icon(Icons.notifications_off_outlined, color: Colors.orange);
-      default:
-        return const Icon(Icons.help_outline_rounded, color: Colors.grey);
     }
   }
 

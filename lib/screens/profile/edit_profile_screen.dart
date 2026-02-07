@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/providers.dart';
+import '../../widgets/avatar_picker_dialog.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -113,22 +114,52 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Profile photo preview
-              CircleAvatar(
-                radius: 60,
-                backgroundColor: colorScheme.primary.withValues(alpha: 0.1),
-                backgroundImage: _photoUrlController.text.isNotEmpty
-                    ? NetworkImage(_photoUrlController.text)
-                    : (user?.photoUrl != null ? NetworkImage(user!.photoUrl!) : null),
-                child: (_photoUrlController.text.isEmpty && user?.photoUrl == null)
-                    ? Icon(
-                        Icons.person_rounded,
-                        size: 60,
-                        color: colorScheme.primary,
-                      )
-                    : null,
+              // Profile photo preview with change button
+              Stack(
+                alignment: Alignment.bottomRight,
+                children: [
+                  CircleAvatar(
+                    radius: 60,
+                    backgroundColor: colorScheme.primary.withValues(alpha: 0.1),
+                    backgroundImage: _photoUrlController.text.isNotEmpty
+                        ? NetworkImage(_photoUrlController.text)
+                        : (user?.photoUrl != null ? NetworkImage(user!.photoUrl!) : null),
+                    child: (_photoUrlController.text.isEmpty && user?.photoUrl == null)
+                        ? Icon(
+                            Icons.person_rounded,
+                            size: 60,
+                            color: colorScheme.primary,
+                          )
+                        : null,
+                  ),
+                  FloatingActionButton.small(
+                    onPressed: () async {
+                      final selectedUrl = await showAvatarPicker(context);
+                      if (selectedUrl != null) {
+                        setState(() {
+                          _photoUrlController.text = selectedUrl; // Empty string clears it
+                        });
+                      }
+                    },
+                    tooltip: 'Choose Avatar',
+                    child: const Icon(Icons.edit_rounded, size: 20),
+                  ),
+                ],
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
+              TextButton.icon(
+                onPressed: () async {
+                  final selectedUrl = await showAvatarPicker(context);
+                  if (selectedUrl != null) {
+                    setState(() {
+                      _photoUrlController.text = selectedUrl; // Empty string clears it
+                    });
+                  }
+                },
+                icon: const Icon(Icons.face_rounded),
+                label: const Text('Choose Avatar'),
+              ),
+              const SizedBox(height: 24),
 
               // Display Name field
               TextFormField(

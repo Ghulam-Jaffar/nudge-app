@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/providers.dart';
+import '../../widgets/avatar_picker_dialog.dart';
 
 class HandleSetupScreen extends ConsumerStatefulWidget {
   const HandleSetupScreen({super.key});
@@ -16,6 +17,7 @@ class _HandleSetupScreenState extends ConsumerState<HandleSetupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _handleController = TextEditingController();
   final _displayNameController = TextEditingController();
+  String? _selectedPhotoUrl;
   bool _isLoading = false;
   bool _isCheckingHandle = false;
   String? _handleError;
@@ -125,7 +127,7 @@ class _HandleSetupScreenState extends ConsumerState<HandleSetupScreen> {
       uid: user.uid,
       handle: _handleController.text.trim(),
       displayName: _displayNameController.text.trim(),
-      photoUrl: user.photoURL,
+      photoUrl: _selectedPhotoUrl ?? user.photoURL,
     );
 
     if (!mounted) return;
@@ -181,50 +183,72 @@ class _HandleSetupScreenState extends ConsumerState<HandleSetupScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Center(
-                  child: Stack(
+                  child: Column(
                     children: [
-                      CircleAvatar(
-                        radius: 50,
-                        backgroundColor:
-                            colorScheme.primary.withValues(alpha: 0.1),
-                        backgroundImage: user?.photoURL != null
-                            ? NetworkImage(user!.photoURL!)
-                            : null,
-                        child: user?.photoURL == null
-                            ? Icon(
-                                Icons.person_rounded,
-                                size: 50,
+                      Stack(
+                        children: [
+                          CircleAvatar(
+                            radius: 50,
+                            backgroundColor:
+                                colorScheme.primary.withValues(alpha: 0.1),
+                            backgroundImage: _selectedPhotoUrl != null
+                                ? NetworkImage(_selectedPhotoUrl!)
+                                : (user?.photoURL != null
+                                    ? NetworkImage(user!.photoURL!)
+                                    : null),
+                            child: _selectedPhotoUrl == null && user?.photoURL == null
+                                ? Icon(
+                                    Icons.person_rounded,
+                                    size: 50,
+                                    color: colorScheme.primary,
+                                  )
+                                : null,
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              decoration: BoxDecoration(
                                 color: colorScheme.primary,
-                              )
-                            : null,
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: colorScheme.primary,
-                            shape: BoxShape.circle,
-                          ),
-                          child: IconButton(
-                            icon: const Icon(
-                              Icons.camera_alt_rounded,
-                              color: Colors.white,
-                              size: 20,
+                                shape: BoxShape.circle,
+                              ),
+                              child: IconButton(
+                                icon: const Icon(
+                                  Icons.face_rounded,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                                onPressed: _isLoading
+                                    ? null
+                                    : () async {
+                                        final selectedUrl =
+                                            await showAvatarPicker(context);
+                                        if (selectedUrl != null) {
+                                          setState(() {
+                                            _selectedPhotoUrl = selectedUrl.isEmpty ? null : selectedUrl;
+                                          });
+                                        }
+                                      },
+                              ),
                             ),
-                            onPressed: _isLoading
-                                ? null
-                                : () {
-                                    // TODO: Implement avatar picker
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                            'Avatar upload coming soon!'),
-                                      ),
-                                    );
-                                  },
                           ),
-                        ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton.icon(
+                        onPressed: _isLoading
+                            ? null
+                            : () async {
+                                final selectedUrl =
+                                    await showAvatarPicker(context);
+                                if (selectedUrl != null) {
+                                  setState(() {
+                                    _selectedPhotoUrl = selectedUrl.isEmpty ? null : selectedUrl;
+                                  });
+                                }
+                              },
+                        icon: const Icon(Icons.face_rounded, size: 18),
+                        label: const Text('Choose Avatar'),
                       ),
                     ],
                   ),
