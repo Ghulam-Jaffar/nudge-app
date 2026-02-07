@@ -8,12 +8,16 @@ final unseenPingsProvider = StreamProvider<List<Ping>>((ref) {
   if (user == null) return Stream.value([]);
 
   final pingService = ref.watch(pingServiceProvider);
-  return pingService.streamUnseenPings(user.uid);
+  return pingService.streamUnseenPings(user.uid).handleError((error) {
+    // Gracefully handle permission-denied or other Firestore errors
+    return <Ping>[];
+  });
 });
 
 /// Total count of unseen pings (for bottom nav badge)
 final totalUnseenPingsCountProvider = Provider<int>((ref) {
-  return ref.watch(unseenPingsProvider).value?.length ?? 0;
+  final pingsAsync = ref.watch(unseenPingsProvider);
+  return pingsAsync.whenData((pings) => pings.length).value ?? 0;
 });
 
 /// Count of unseen pings per space
