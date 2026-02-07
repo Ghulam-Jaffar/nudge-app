@@ -22,10 +22,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const rawSecret = req.headers['x-cron-secret'] || req.query['secret'];
   const secret = Array.isArray(rawSecret) ? rawSecret[0] : rawSecret;
   if (!CRON_SECRET || secret !== CRON_SECRET) {
-    return res.status(401).json({
-      error: 'Unauthorized',
-      debug: { hasEnv: !!CRON_SECRET, envLength: CRON_SECRET.length, secretReceived: typeof secret, secretLength: String(secret || '').length },
-    });
+    return res.status(401).json({ error: 'Unauthorized' });
   }
 
   const now = admin.firestore.Timestamp.now();
@@ -91,7 +88,7 @@ async function sendToUser(uid: string, title: string, body: string, data: Record
     tokens,
     notification: { title, body },
     data,
-    android: { notification: { channelId: 'reminders', priority: 'high', defaultSound: true } },
+    android: { notification: { channelId: 'space_reminders', priority: 'high', defaultSound: true } },
     apns: { payload: { aps: { sound: 'default', badge: 1 } } },
   };
 

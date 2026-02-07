@@ -87,18 +87,28 @@ class FCMService {
       },
     );
 
-    // Create notification channel for Android
-    const androidChannel = AndroidNotificationChannel(
-      'space_reminders',
-      'Space Reminders',
-      description: 'Notifications for shared space reminders',
-      importance: Importance.high,
-    );
-
-    await _localNotifications
+    // Create notification channels for Android
+    final androidPlugin = _localNotifications
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(androidChannel);
+            AndroidFlutterLocalNotificationsPlugin>();
+
+    if (androidPlugin != null) {
+      const spaceChannel = AndroidNotificationChannel(
+        'space_reminders',
+        'Space Reminders',
+        description: 'Notifications for shared space reminders',
+        importance: Importance.high,
+      );
+      await androidPlugin.createNotificationChannel(spaceChannel);
+
+      const remindersChannel = AndroidNotificationChannel(
+        'reminders',
+        'Reminders',
+        description: 'General reminder notifications',
+        importance: Importance.high,
+      );
+      await androidPlugin.createNotificationChannel(remindersChannel);
+    }
   }
 
   /// Request notification permissions
