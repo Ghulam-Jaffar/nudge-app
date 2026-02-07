@@ -9,6 +9,7 @@ import '../services/space_service.dart';
 import '../services/invite_service.dart';
 import '../services/activity_service.dart';
 import '../services/ping_service.dart';
+import '../services/notification_api_service.dart';
 
 final firebaseAuthProvider = Provider<FirebaseAuth>((ref) {
   return FirebaseAuth.instance;
@@ -50,6 +51,10 @@ final inviteServiceProvider = Provider<InviteService>((ref) {
 
 final pingServiceProvider = Provider<PingService>((ref) {
   return PingService();
+});
+
+final notificationApiServiceProvider = Provider<NotificationApiService>((ref) {
+  return NotificationApiService();
 });
 
 final authStateProvider = StreamProvider<User?>((ref) {

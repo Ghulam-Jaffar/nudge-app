@@ -6,3 +6,4 @@ export 'space_service.dart';
 export 'invite_service.dart';
 export 'activity_service.dart';
 export 'ping_service.dart';
+export 'notification_api_service.dart';

@@ -61,3 +61,10 @@ lib/firebase_options.dart
 # Claude Code
 .claude/
 nul
+
+# Node (notify-api)
+node_modules/
+**/node_modules/
+
+# Firebase service account keys (never commit!)
+*-firebase-adminsdk-*.json

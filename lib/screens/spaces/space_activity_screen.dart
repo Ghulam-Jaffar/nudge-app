@@ -71,6 +71,7 @@ class _SpaceActivityScreenState extends ConsumerState<SpaceActivityScreen> {
         child: activitiesAsync.when(
           data: (activities) => invitesAsync.when(
             data: (invites) {
+
               final currentUser = ref.watch(currentUserProvider);
               // Combine and sort by date
               final allItems = <_TimelineItem>[];
@@ -128,13 +129,13 @@ class _SpaceActivityScreenState extends ConsumerState<SpaceActivityScreen> {
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, stack) {
               debugPrint('Invites error: $error');
-              return _buildErrorState(theme, colorScheme);
+              return _buildScrollableError(context, theme, colorScheme);
             },
           ),
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, stack) {
             debugPrint('Activities error: $error');
-            return _buildErrorState(theme, colorScheme);
+            return _buildScrollableError(context, theme, colorScheme);
           },
         ),
       ),
@@ -176,6 +177,16 @@ class _SpaceActivityScreenState extends ConsumerState<SpaceActivityScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildScrollableError(BuildContext context, ThemeData theme, ColorScheme colorScheme) {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        SizedBox(height: MediaQuery.of(context).size.height * 0.25),
+        _buildErrorState(theme, colorScheme),
+      ],
     );
   }
 

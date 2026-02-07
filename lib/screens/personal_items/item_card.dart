@@ -302,11 +302,18 @@ class ItemCard extends ConsumerWidget {
                   children: [
                     if (pingCount > 0)
                       Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
                           color: Colors.orange,
-                          shape: BoxShape.circle,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '$pingCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       )
                     else if (isUnread)

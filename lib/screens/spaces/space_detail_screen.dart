@@ -31,10 +31,18 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
     HapticFeedback.mediumImpact();
     ref.invalidate(spaceProvider(widget.spaceId));
     ref.invalidate(spaceItemsProvider(widget.spaceId));
+    ref.invalidate(unseenPingsProvider);
     await Future.delayed(const Duration(milliseconds: 500));
   }
 
   Future<void> _editItem(ReminderItem item) async {
+    // Mark pings as seen when opening the item
+    final currentUser = ref.read(currentUserProvider);
+    if (currentUser != null) {
+      final pingService = ref.read(pingServiceProvider);
+      pingService.markPingsAsSeen(item.itemId, currentUser.uid);
+    }
+
     await ItemEditorSheet.show(
       context,
       item: item,
@@ -306,6 +314,16 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
         debugPrint('Error logging ping activity: $e');
       }
 
+      // Send push notification (fire-and-forget, don't block UI)
+      final notificationApi = ref.read(notificationApiServiceProvider);
+      notificationApi.sendPingNotification(
+        toUid: item.assignedToUid!,
+        spaceId: space.spaceId,
+        itemId: item.itemId,
+        itemTitle: item.title,
+        spaceName: space.name,
+      );
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Nudged about "${item.title}"!')),
@@ -491,7 +509,16 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
       ),
       error: (error, stack) => Scaffold(
         appBar: AppBar(),
-        body: _buildErrorState(theme, colorScheme),
+        body: RefreshIndicator(
+          onRefresh: _onRefresh,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [
+              SizedBox(height: MediaQuery.of(context).size.height * 0.25),
+              _buildErrorState(theme, colorScheme),
+            ],
+          ),
+        ),
       ),
     );
   }
