@@ -5,10 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class NotificationApiService {
-  // TODO: Replace with your Vercel deployment URL
   static const _baseUrl = String.fromEnvironment(
     'NOTIFY_API_URL',
-    defaultValue: '',
+    defaultValue: 'https://nudge-notify-api.vercel.app',
   );
 
   final FirebaseAuth _auth;
