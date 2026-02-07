@@ -14,6 +14,8 @@ class SharedReminderApp extends ConsumerStatefulWidget {
 }
 
 class _SharedReminderAppState extends ConsumerState<SharedReminderApp> {
+  String? _lastRegisteredUid;
+
   @override
   void initState() {
     super.initState();
@@ -25,6 +27,16 @@ class _SharedReminderAppState extends ConsumerState<SharedReminderApp> {
     // Request local notification permissions
     final notificationService = LocalNotificationService();
     await notificationService.requestPermissions();
+  }
+
+  /// Register FCM token whenever an authenticated user is detected
+  void _registerFcmTokenIfNeeded() {
+    final user = ref.read(currentUserProvider);
+    if (user != null && user.uid != _lastRegisteredUid) {
+      _lastRegisteredUid = user.uid;
+      final fcmService = ref.read(fcmServiceProvider);
+      fcmService.registerToken(user.uid);
+    }
   }
 
   void _setupNotificationHandler() {
@@ -55,6 +67,13 @@ class _SharedReminderAppState extends ConsumerState<SharedReminderApp> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch auth state and register FCM token when user is authenticated
+    ref.listen(currentUserProvider, (prev, next) {
+      if (next != null) _registerFcmTokenIfNeeded();
+    });
+    // Also check on first build
+    _registerFcmTokenIfNeeded();
+
     final router = ref.watch(routerProvider);
     final themeState = ref.watch(themeProvider);
 

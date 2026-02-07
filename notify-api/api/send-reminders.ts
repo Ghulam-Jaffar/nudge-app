@@ -87,10 +87,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
 async function sendToUser(uid: string, title: string, body: string, data: Record<string, string>) {
   const userDoc = await db.collection('users').doc(uid).get();
-  if (!userDoc.exists) return;
+  if (!userDoc.exists) { console.log(`[sendToUser] user ${uid} not found`); return; }
 
   const tokens = Object.keys(userDoc.data()?.fcmTokens || {});
-  if (tokens.length === 0) return;
+  if (tokens.length === 0) { console.log(`[sendToUser] user ${uid} has no FCM tokens`); return; }
+
+  console.log(`[sendToUser] sending to ${uid}, ${tokens.length} token(s)`);
 
   const message: admin.messaging.MulticastMessage = {
     tokens,
@@ -101,10 +103,12 @@ async function sendToUser(uid: string, title: string, body: string, data: Record
   };
 
   const response = await messaging.sendEachForMulticast(message);
+  console.log(`[sendToUser] result: ${response.successCount} success, ${response.failureCount} failure`);
 
   // Clean invalid tokens
   for (let i = 0; i < response.responses.length; i++) {
     const err = response.responses[i].error;
+    if (err) { console.log(`[sendToUser] token ${i} error: ${err.code} - ${err.message}`); }
     if (err?.code === 'messaging/registration-token-not-registered' || err?.code === 'messaging/invalid-registration-token') {
       await db.collection('users').doc(uid).update({ [`fcmTokens.${tokens[i]}`]: admin.firestore.FieldValue.delete() });
     }
