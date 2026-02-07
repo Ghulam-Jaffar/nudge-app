@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/space_model.dart';
 import '../../providers/providers.dart';
 import 'space_editor_sheet.dart';
+import '../../widgets/skeleton_space_card.dart';
 
 class SpacesListScreen extends ConsumerStatefulWidget {
   const SpacesListScreen({super.key});
@@ -78,9 +79,7 @@ class _SpacesListScreenState extends ConsumerState<SpacesListScreen> {
                   ),
                 );
               },
-              loading: () => const SliverFillRemaining(
-                child: Center(child: CircularProgressIndicator()),
-              ),
+              loading: () => const SkeletonSpaceList(),
               error: (error, stack) => SliverFillRemaining(
                 child: Center(
                   child: Column(

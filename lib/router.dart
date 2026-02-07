@@ -72,15 +72,21 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: 'signin',
-            builder: (context, state) => const SignInScreen(),
+            pageBuilder: (context, state) => _buildPageTransition(
+              state, const SignInScreen(),
+            ),
           ),
           GoRoute(
             path: 'signup',
-            builder: (context, state) => const SignUpScreen(),
+            pageBuilder: (context, state) => _buildPageTransition(
+              state, const SignUpScreen(),
+            ),
           ),
           GoRoute(
             path: 'setup-handle',
-            builder: (context, state) => const HandleSetupScreen(),
+            pageBuilder: (context, state) => _buildPageTransition(
+              state, const HandleSetupScreen(),
+            ),
           ),
         ],
       ),
@@ -114,21 +120,58 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Routes outside shell (with back navigation)
       GoRoute(
         path: '/spaces/:spaceId',
-        builder: (context, state) => SpaceDetailScreen(
-          spaceId: state.pathParameters['spaceId']!,
+        pageBuilder: (context, state) => _buildPageTransition(
+          state,
+          SpaceDetailScreen(spaceId: state.pathParameters['spaceId']!),
         ),
       ),
       GoRoute(
         path: '/invites',
-        builder: (context, state) => const InvitesScreen(),
+        pageBuilder: (context, state) => _buildPageTransition(
+          state, const InvitesScreen(),
+        ),
       ),
       GoRoute(
         path: '/privacy-policy',
-        builder: (context, state) => const PrivacyPolicyScreen(),
+        pageBuilder: (context, state) => _buildPageTransition(
+          state, const PrivacyPolicyScreen(),
+        ),
       ),
     ],
   );
 });
+
+CustomTransitionPage<void> _buildPageTransition(
+  GoRouterState state,
+  Widget child,
+) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 250),
+    reverseTransitionDuration: const Duration(milliseconds: 200),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final slide = Tween<Offset>(
+        begin: const Offset(0.25, 0),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+      ));
+      final fade = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOut,
+      );
+      return SlideTransition(
+        position: slide,
+        child: FadeTransition(
+          opacity: fade,
+          child: child,
+        ),
+      );
+    },
+  );
+}
 
 class _LoadingScreen extends StatelessWidget {
   const _LoadingScreen();

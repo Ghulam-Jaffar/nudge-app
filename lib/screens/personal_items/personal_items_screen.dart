@@ -5,6 +5,7 @@ import '../../models/item_model.dart';
 import '../../providers/providers.dart';
 import 'item_card.dart';
 import 'item_editor_sheet.dart';
+import '../../widgets/skeleton_item_card.dart';
 
 enum PersonalItemsFilter { today, upcoming, completed }
 
@@ -255,9 +256,7 @@ class _PersonalItemsScreenState extends ConsumerState<PersonalItemsScreen> {
                   ),
                 );
               },
-              loading: () => const SliverFillRemaining(
-                child: Center(child: CircularProgressIndicator()),
-              ),
+              loading: () => const SkeletonItemList(),
               error: (error, stack) => SliverFillRemaining(
                 child: Center(
                   child: Column(

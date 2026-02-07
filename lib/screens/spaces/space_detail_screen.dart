@@ -11,6 +11,7 @@ import 'invite_user_sheet.dart';
 import 'space_activity_screen.dart';
 import 'space_editor_sheet.dart';
 import 'space_members_sheet.dart';
+import '../../widgets/skeleton_item_card.dart';
 
 class SpaceDetailScreen extends ConsumerStatefulWidget {
   final String spaceId;
@@ -483,9 +484,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                       ),
                     );
                   },
-                  loading: () => const SliverFillRemaining(
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
+                  loading: () => const SkeletonItemList(),
                   error: (error, stack) => SliverFillRemaining(
                     child: _buildErrorState(theme, colorScheme),
                   ),
@@ -505,7 +504,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
       },
       loading: () => Scaffold(
         appBar: AppBar(),
-        body: const Center(child: CircularProgressIndicator()),
+        body: const Center(child: CircularProgressIndicator.adaptive()),
       ),
       error: (error, stack) => Scaffold(
         appBar: AppBar(),

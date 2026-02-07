@@ -78,13 +78,14 @@ class WelcomeScreen extends ConsumerWidget {
                     const SizedBox(height: 16),
                     Text(
                       'Gentle reminders for\nyou and your friends',
-                      style: theme.textTheme.titleMedium?.copyWith(
+                      style: theme.textTheme.bodyLarge?.copyWith(
                         color: colorScheme.onSurface.withValues(alpha: 0.6),
-                        height: 1.4,
+                        height: 1.5,
+                        fontWeight: FontWeight.w400,
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 20),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [

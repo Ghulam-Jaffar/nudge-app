@@ -1,3 +1,4 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,8 +6,118 @@ import '../../providers/providers.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/theme_packs.dart';
 
-class ProfileScreen extends ConsumerWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  AuthorizationStatus _notificationStatus = AuthorizationStatus.notDetermined;
+  bool _isLoadingStatus = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkNotificationStatus();
+  }
+
+  Future<void> _checkNotificationStatus() async {
+    final fcmService = ref.read(fcmServiceProvider);
+    final status = await fcmService.getPermissionStatus();
+    if (mounted) {
+      setState(() {
+        _notificationStatus = status;
+        _isLoadingStatus = false;
+      });
+    }
+  }
+
+  Future<void> _handleNotificationTap(BuildContext context) async {
+    final fcmService = ref.read(fcmServiceProvider);
+
+    if (_notificationStatus == AuthorizationStatus.denied) {
+      // Show dialog explaining to enable in system settings
+      if (!context.mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Enable Notifications'),
+          content: const Text(
+            'Notifications are disabled. To enable them, please go to your device settings:\n\n'
+            'Settings → Nudge → Notifications → Allow Notifications',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    } else if (_notificationStatus == AuthorizationStatus.notDetermined) {
+      // Request permission
+      final granted = await fcmService.requestPermission();
+      if (mounted) {
+        setState(() {
+          _notificationStatus = granted
+            ? AuthorizationStatus.authorized
+            : AuthorizationStatus.denied;
+        });
+
+        if (granted && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Notifications enabled!')),
+          );
+        }
+      }
+    } else {
+      // Already authorized
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Notifications are already enabled')),
+      );
+    }
+  }
+
+  String _getStatusText() {
+    if (_isLoadingStatus) return 'Checking status...';
+
+    switch (_notificationStatus) {
+      case AuthorizationStatus.authorized:
+      case AuthorizationStatus.provisional:
+        return 'Push notifications are enabled';
+      case AuthorizationStatus.denied:
+        return 'Push notifications are disabled';
+      case AuthorizationStatus.notDetermined:
+        return 'Tap to enable push notifications';
+      default:
+        return 'Notification status unknown';
+    }
+  }
+
+  Widget _getStatusIcon() {
+    if (_isLoadingStatus) {
+      return const SizedBox(
+        width: 24,
+        height: 24,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
+    }
+
+    switch (_notificationStatus) {
+      case AuthorizationStatus.authorized:
+      case AuthorizationStatus.provisional:
+        return const Icon(Icons.check_circle_rounded, color: Colors.green);
+      case AuthorizationStatus.denied:
+        return const Icon(Icons.cancel_rounded, color: Colors.red);
+      case AuthorizationStatus.notDetermined:
+        return const Icon(Icons.notifications_off_outlined, color: Colors.orange);
+      default:
+        return const Icon(Icons.help_outline_rounded, color: Colors.grey);
+    }
+  }
 
   Future<void> _signOut(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
@@ -45,7 +156,7 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final themeState = ref.watch(themeProvider);
@@ -218,15 +329,9 @@ class ProfileScreen extends ConsumerWidget {
                         ListTile(
                           leading: const Icon(Icons.notifications_outlined),
                           title: const Text('Notifications'),
-                          subtitle: const Text('Push notifications are enabled'),
-                          trailing: const Icon(Icons.check_circle_rounded, color: Colors.green),
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Notifications are managed by your device settings'),
-                              ),
-                            );
-                          },
+                          subtitle: Text(_getStatusText()),
+                          trailing: _getStatusIcon(),
+                          onTap: () => _handleNotificationTap(context),
                         ),
                         const Divider(height: 1),
                         ListTile(

@@ -119,6 +119,12 @@ class FCMService {
     }
   }
 
+  /// Get current notification permission status without requesting
+  Future<AuthorizationStatus> getPermissionStatus() async {
+    final settings = await _messaging.getNotificationSettings();
+    return settings.authorizationStatus;
+  }
+
   /// Request notification permissions
   Future<bool> requestPermission() async {
     final settings = await _messaging.requestPermission(
