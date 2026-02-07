@@ -19,11 +19,80 @@ class AppTheme {
       scaffoldBackgroundColor: isDark
           ? pack.backgroundColor
           : pack.backgroundColor,
+      textTheme: TextTheme(
+        headlineLarge: TextStyle(
+          fontSize: 30,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.5,
+          color: colorScheme.onSurface,
+        ),
+        headlineMedium: TextStyle(
+          fontSize: 26,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.5,
+          color: colorScheme.onSurface,
+        ),
+        headlineSmall: TextStyle(
+          fontSize: 22,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.3,
+          color: colorScheme.onSurface,
+        ),
+        titleLarge: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.3,
+          color: colorScheme.onSurface,
+        ),
+        titleMedium: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: colorScheme.onSurface,
+        ),
+        titleSmall: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: colorScheme.onSurface,
+        ),
+        bodyLarge: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w400,
+          height: 1.3,
+          color: colorScheme.onSurface,
+        ),
+        bodyMedium: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+          height: 1.3,
+          color: colorScheme.onSurface,
+        ),
+        bodySmall: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w400,
+          height: 1.3,
+          color: colorScheme.onSurface.withValues(alpha: 0.7),
+        ),
+        labelLarge: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: colorScheme.onSurface,
+        ),
+        labelSmall: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+          color: colorScheme.onSurface.withValues(alpha: 0.7),
+        ),
+      ),
       cardTheme: CardThemeData(
         color: isDark ? pack.cardColor : pack.cardColor,
-        elevation: 0,
+        elevation: 1,
+        shadowColor: colorScheme.shadow.withValues(alpha: 0.15),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: colorScheme.primary.withValues(alpha: 0.1),
+            width: 1,
+          ),
         ),
       ),
       appBarTheme: AppBarTheme(
@@ -40,7 +109,7 @@ class AppTheme {
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: isDark ? pack.surfaceColor : Colors.white,
         selectedItemColor: pack.primaryColor,
-        unselectedItemColor: colorScheme.onSurface.withValues(alpha: 0.5),
+        unselectedItemColor: colorScheme.onSurface.withValues(alpha: 0.6),
         type: BottomNavigationBarType.fixed,
         elevation: 8,
       ),

@@ -190,15 +190,25 @@ class ItemCard extends ConsumerWidget {
     final isUnread = _isUnread(currentUser?.uid);
 
     Widget cardContent = Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       color: _isOverdue
           ? colorScheme.errorContainer.withValues(alpha: 0.3)
           : null,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
+        child: Container(
+          decoration: item.priority != ItemPriority.none
+              ? BoxDecoration(
+                  border: Border(
+                    left: BorderSide(
+                      color: priorityColor.withValues(alpha: 0.6),
+                      width: 3,
+                    ),
+                  ),
+                )
+              : null,
+          padding: const EdgeInsets.all(14),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -220,7 +230,7 @@ class ItemCard extends ConsumerWidget {
                     Text(
                       item.title,
                       style: theme.textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
                         decoration: item.isCompleted
                             ? TextDecoration.lineThrough
                             : null,
@@ -238,7 +248,7 @@ class ItemCard extends ConsumerWidget {
                       Text(
                         item.details!,
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: colorScheme.onSurface.withValues(alpha: 0.7),
                           decoration: item.isCompleted
                               ? TextDecoration.lineThrough
                               : null,
@@ -302,16 +312,16 @@ class ItemCard extends ConsumerWidget {
                   children: [
                     if (pingCount > 0)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           color: Colors.orange,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           '$pingCount',
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -354,24 +364,38 @@ class ItemCard extends ConsumerWidget {
       movementDuration: const Duration(milliseconds: 200),
       resizeDuration: const Duration(milliseconds: 300),
       background: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: Colors.green,
           borderRadius: BorderRadius.circular(16),
         ),
         alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.only(left: 20),
-        child: const Icon(Icons.check_rounded, color: Colors.white, size: 28),
+        padding: const EdgeInsets.only(left: 24),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.check_rounded, color: Colors.white, size: 24),
+            SizedBox(width: 8),
+            Text('Complete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
+          ],
+        ),
       ),
       secondaryBackground: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: colorScheme.error,
           borderRadius: BorderRadius.circular(16),
         ),
         alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        child: const Icon(Icons.delete_rounded, color: Colors.white, size: 28),
+        padding: const EdgeInsets.only(right: 24),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Delete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
+            SizedBox(width: 8),
+            Icon(Icons.delete_rounded, color: Colors.white, size: 24),
+          ],
+        ),
       ),
       confirmDismiss: (direction) async {
         if (direction == DismissDirection.startToEnd) {
