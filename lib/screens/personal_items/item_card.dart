@@ -192,7 +192,7 @@ class ItemCard extends ConsumerWidget {
     Widget cardContent = Semantics(
       label: '${item.isCompleted ? "Completed: " : ""}${item.title}${_isOverdue ? ", overdue" : ""}',
       child: Card(
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        margin: enableSwipe ? EdgeInsets.zero : const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       color: _isOverdue
           ? colorScheme.errorContainer.withValues(alpha: 0.3)
           : null,
@@ -347,68 +347,63 @@ class ItemCard extends ConsumerWidget {
 
     if (!enableSwipe) return cardContent;
 
-    // Wrap with Dismissible for swipe actions
-    return Dismissible(
-      key: ValueKey('dismissible_${item.itemId}'),
-      dismissThresholds: const {
-        DismissDirection.startToEnd: 0.3,
-        DismissDirection.endToStart: 0.3,
-      },
-      movementDuration: const Duration(milliseconds: 200),
-      resizeDuration: const Duration(milliseconds: 300),
-      background: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: item.isCompleted ? Colors.orange : Colors.green,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.only(left: 24),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(item.isCompleted ? Icons.undo_rounded : Icons.check_rounded, color: Colors.white, size: 24),
-            const SizedBox(width: 8),
-            Text(item.isCompleted ? 'Undo' : 'Complete', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
-          ],
+    // Wrap with Dismissible inside Padding+ClipRRect so backgrounds
+    // are clipped to the card's rounded shape instead of going edge-to-edge.
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Dismissible(
+          key: ValueKey('dismissible_${item.itemId}'),
+          dismissThresholds: const {
+            DismissDirection.startToEnd: 0.3,
+            DismissDirection.endToStart: 0.3,
+          },
+          movementDuration: const Duration(milliseconds: 200),
+          resizeDuration: const Duration(milliseconds: 300),
+          background: Container(
+            color: item.isCompleted ? Colors.orange : Colors.green,
+            alignment: Alignment.centerLeft,
+            padding: const EdgeInsets.only(left: 24),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(item.isCompleted ? Icons.undo_rounded : Icons.check_rounded, color: Colors.white, size: 24),
+                const SizedBox(width: 8),
+                Text(item.isCompleted ? 'Undo' : 'Complete', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
+              ],
+            ),
+          ),
+          secondaryBackground: Container(
+            color: colorScheme.error,
+            alignment: Alignment.centerRight,
+            padding: const EdgeInsets.only(right: 24),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Delete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
+                SizedBox(width: 8),
+                Icon(Icons.delete_rounded, color: Colors.white, size: 24),
+              ],
+            ),
+          ),
+          confirmDismiss: (direction) async {
+            if (direction == DismissDirection.startToEnd) {
+              // Swipe right to complete/uncomplete
+              _handleComplete(ref, !item.isCompleted);
+              return false; // Don't dismiss, just toggle
+            } else {
+              // Swipe left to delete
+              await _handleDelete(context, ref);
+              return false;
+            }
+          },
+          onDismissed: (direction) {
+            onDelete?.call();
+          },
+          child: cardContent,
         ),
       ),
-      secondaryBackground: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: colorScheme.error,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 24),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Delete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
-            SizedBox(width: 8),
-            Icon(Icons.delete_rounded, color: Colors.white, size: 24),
-          ],
-        ),
-      ),
-      confirmDismiss: (direction) async {
-        if (direction == DismissDirection.startToEnd) {
-          // Swipe right to complete/uncomplete
-          _handleComplete(ref, !item.isCompleted);
-          return false; // Don't dismiss, just toggle
-        } else {
-          // Swipe left to delete
-          // Return false to prevent Dismissible from animating - the Firestore
-          // stream will remove the item from the list, avoiding a race condition
-          // where the widget gets disposed mid-animation.
-          await _handleDelete(context, ref);
-          return false;
-        }
-      },
-      onDismissed: (direction) {
-        // Only called when confirmDismiss returns true (deletion)
-        onDelete?.call();
-      },
-      child: cardContent,
     );
   }
 }

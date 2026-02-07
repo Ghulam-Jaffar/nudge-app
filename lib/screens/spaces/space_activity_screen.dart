@@ -258,39 +258,6 @@ class _ActivityTileState extends State<_ActivityTile> {
     }
   }
 
-  IconData _getActivityIcon() {
-    switch (widget.activity.type) {
-      case ActivityType.inviteSent:
-        return Icons.mail_outline_rounded;
-      case ActivityType.inviteAccepted:
-        return Icons.check_circle_outline_rounded;
-      case ActivityType.inviteDeclined:
-        return Icons.cancel_outlined;
-      case ActivityType.memberJoined:
-        return Icons.person_add_outlined;
-      case ActivityType.memberLeft:
-        return Icons.person_remove_outlined;
-      case ActivityType.itemCreated:
-        return Icons.add_circle_outline_rounded;
-      case ActivityType.itemCompleted:
-        return Icons.task_alt_rounded;
-      case ActivityType.itemAssigned:
-        return Icons.assignment_ind_outlined;
-      case ActivityType.itemDeleted:
-        return Icons.delete_outline_rounded;
-      case ActivityType.itemUncompleted:
-        return Icons.undo_rounded;
-      case ActivityType.itemUpdated:
-        return Icons.edit_outlined;
-      case ActivityType.itemRestored:
-        return Icons.restore_rounded;
-      case ActivityType.memberRoleChanged:
-        return Icons.admin_panel_settings_outlined;
-      case ActivityType.ping:
-        return Icons.notifications_active_rounded;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -335,13 +302,23 @@ class _ActivityTileState extends State<_ActivityTile> {
             ? NetworkImage(_actor!.photoUrl!)
             : null,
         child: _actor?.photoUrl == null
-            ? Icon(
-                _getActivityIcon(),
-                color: widget.activity.type == ActivityType.ping
-                    ? Colors.orange
-                    : colorScheme.primary,
-                size: 20,
-              )
+            ? (_actor?.displayName != null && _actor!.displayName.isNotEmpty
+                ? Text(
+                    _actor!.displayName[0].toUpperCase(),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: widget.activity.type == ActivityType.ping
+                          ? Colors.orange
+                          : colorScheme.primary,
+                    ),
+                  )
+                : Icon(
+                    Icons.person_rounded,
+                    color: widget.activity.type == ActivityType.ping
+                        ? Colors.orange
+                        : colorScheme.primary,
+                    size: 20,
+                  ))
             : null,
       ),
       title: Text(description),
