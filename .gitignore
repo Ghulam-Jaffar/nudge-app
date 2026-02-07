@@ -68,3 +68,6 @@ node_modules/
 
 # Firebase service account keys (never commit!)
 *-firebase-adminsdk-*.json
+
+# New Plan
+new_plan.md

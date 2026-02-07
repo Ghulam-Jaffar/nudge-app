@@ -442,7 +442,9 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                     child: Text(
-                      'Swipe right to complete, left to delete',
+                      _selectedFilter == 2
+                          ? 'Swipe right to undo, left to delete'
+                          : 'Swipe right to complete, left to delete',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurface.withValues(alpha: 0.4),
                       ),

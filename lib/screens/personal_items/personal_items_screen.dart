@@ -78,7 +78,7 @@ class _PersonalItemsScreenState extends ConsumerState<PersonalItemsScreen> {
       case PersonalItemsFilter.upcoming:
         return 'Nothing scheduled';
       case PersonalItemsFilter.completed:
-        return 'No completed tasks yet';
+        return 'Nothing here yet';
     }
   }
 
@@ -89,7 +89,7 @@ class _PersonalItemsScreenState extends ConsumerState<PersonalItemsScreen> {
       case PersonalItemsFilter.upcoming:
         return 'Plan ahead by scheduling future reminders';
       case PersonalItemsFilter.completed:
-        return 'Complete tasks to see them here';
+        return 'Completed reminders will show up here';
     }
   }
 
@@ -182,7 +182,9 @@ class _PersonalItemsScreenState extends ConsumerState<PersonalItemsScreen> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 child: Text(
-                  'Swipe right to complete, left to delete',
+                  _currentFilter == PersonalItemsFilter.completed
+                      ? 'Swipe right to undo, left to delete'
+                      : 'Swipe right to complete, left to delete',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurface.withValues(alpha: 0.4),
                   ),
@@ -202,7 +204,7 @@ class _PersonalItemsScreenState extends ConsumerState<PersonalItemsScreen> {
                         children: [
                           MascotImage(
                             variant: _currentFilter == PersonalItemsFilter.completed
-                                ? MascotVariant.celebrating
+                                ? MascotVariant.thinking
                                 : MascotVariant.happy,
                             size: 120,
                             fallbackIcon: _getEmptyIcon(),

@@ -356,17 +356,17 @@ class ItemCard extends ConsumerWidget {
       background: Container(
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.green,
+          color: item.isCompleted ? Colors.orange : Colors.green,
           borderRadius: BorderRadius.circular(16),
         ),
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.only(left: 24),
-        child: const Row(
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.check_rounded, color: Colors.white, size: 24),
-            SizedBox(width: 8),
-            Text('Complete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
+            Icon(item.isCompleted ? Icons.undo_rounded : Icons.check_rounded, color: Colors.white, size: 24),
+            const SizedBox(width: 8),
+            Text(item.isCompleted ? 'Undo' : 'Complete', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
           ],
         ),
       ),
