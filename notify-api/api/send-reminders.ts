@@ -19,7 +19,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Verify cron secret
-  const secret = req.headers['x-cron-secret'] || req.query['secret'];
+  const rawSecret = req.headers['x-cron-secret'] || req.query['secret'];
+  const secret = Array.isArray(rawSecret) ? rawSecret[0] : rawSecret;
   if (!CRON_SECRET || secret !== CRON_SECRET) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
