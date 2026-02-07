@@ -14,6 +14,7 @@ import 'space_members_sheet.dart';
 import '../../widgets/skeleton_item_card.dart';
 import '../../utils/error_messages.dart';
 import '../../widgets/mascot_image.dart';
+import '../../utils/feature_hints.dart';
 
 class SpaceDetailScreen extends ConsumerStatefulWidget {
   final String spaceId;
@@ -29,6 +30,25 @@ class SpaceDetailScreen extends ConsumerStatefulWidget {
 
 class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
   int _selectedFilter = 0; // 0=All, 1=Incomplete, 2=Completed
+  bool _showSwipeHint = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkHints();
+  }
+
+  Future<void> _checkHints() async {
+    final show = await FeatureHints.shouldShow(FeatureHints.swipeHint);
+    if (mounted && show) {
+      setState(() => _showSwipeHint = true);
+    }
+  }
+
+  void _dismissSwipeHint() {
+    setState(() => _showSwipeHint = false);
+    FeatureHints.markShown(FeatureHints.swipeHint);
+  }
 
   Future<void> _onRefresh() async {
     HapticFeedback.mediumImpact();
@@ -437,21 +457,38 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                     ),
                   ),
                 ),
-                // Swipe hint
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    child: Text(
-                      _selectedFilter == 2
-                          ? 'Swipe right to undo, left to delete'
-                          : 'Swipe right to complete, left to delete',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurface.withValues(alpha: 0.4),
+                // Swipe hint — shows once, then dismisses
+                if (_showSwipeHint)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      child: GestureDetector(
+                        onTap: _dismissSwipeHint,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: colorScheme.primaryContainer.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.swipe_rounded, size: 16, color: colorScheme.primary),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Swipe right to complete, left to delete',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.primary,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Icon(Icons.close_rounded, size: 14, color: colorScheme.primary.withValues(alpha: 0.5)),
+                            ],
+                          ),
+                        ),
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ),
-                ),
                 // Items list
                 itemsAsync.when(
                   data: (items) {

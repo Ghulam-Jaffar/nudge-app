@@ -12,6 +12,7 @@ import 'screens/spaces/spaces_list_screen.dart';
 import 'screens/spaces/space_detail_screen.dart';
 import 'screens/invites/invites_screen.dart';
 import 'screens/profile/profile_screen.dart';
+import 'screens/profile/edit_profile_screen.dart';
 import 'screens/profile/privacy_policy_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -129,6 +130,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/invites',
         pageBuilder: (context, state) => _buildPageTransition(
           state, const InvitesScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/edit-profile',
+        pageBuilder: (context, state) => _buildPageTransition(
+          state, const EditProfileScreen(),
         ),
       ),
       GoRoute(

@@ -205,13 +205,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                   const SizedBox(height: 24),
                   OutlinedButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Edit profile coming soon!'),
-                        ),
-                      );
-                    },
+                    onPressed: () => context.push('/edit-profile'),
                     child: const Text('Edit Profile'),
                   ),
                 ],

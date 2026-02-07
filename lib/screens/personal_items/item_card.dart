@@ -189,8 +189,10 @@ class ItemCard extends ConsumerWidget {
     final currentUser = ref.watch(currentUserProvider);
     final isUnread = _isUnread(currentUser?.uid);
 
-    Widget cardContent = Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    Widget cardContent = Semantics(
+      label: '${item.isCompleted ? "Completed: " : ""}${item.title}${_isOverdue ? ", overdue" : ""}',
+      child: Card(
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       color: _isOverdue
           ? colorScheme.errorContainer.withValues(alpha: 0.3)
           : null,
@@ -340,6 +342,7 @@ class ItemCard extends ConsumerWidget {
           ),
         ),
       ),
+    ),
     );
 
     if (!enableSwipe) return cardContent;
@@ -450,37 +453,45 @@ class _CompletionCheckboxState extends State<_CompletionCheckbox>
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () async {
-        HapticFeedback.mediumImpact();
-        await _controller.forward();
-        await _controller.reverse();
-        widget.onChanged(!widget.isCompleted);
-      },
-      child: ScaleTransition(
-        scale: _scaleAnimation,
-        child: Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: widget.isCompleted
-                  ? widget.priorityColor
-                  : widget.priorityColor.withValues(alpha: 0.5),
-              width: 2,
+    return Semantics(
+      label: widget.isCompleted ? 'Mark as incomplete' : 'Mark as complete',
+      button: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () async {
+          HapticFeedback.mediumImpact();
+          await _controller.forward();
+          await _controller.reverse();
+          widget.onChanged(!widget.isCompleted);
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: ScaleTransition(
+            scale: _scaleAnimation,
+            child: Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: widget.isCompleted
+                      ? widget.priorityColor
+                      : widget.priorityColor.withValues(alpha: 0.5),
+                  width: 2,
+                ),
+                color: widget.isCompleted
+                    ? widget.priorityColor
+                    : Colors.transparent,
+              ),
+              child: widget.isCompleted
+                  ? const Icon(
+                      Icons.check_rounded,
+                      size: 18,
+                      color: Colors.white,
+                    )
+                  : null,
             ),
-            color: widget.isCompleted
-                ? widget.priorityColor
-                : Colors.transparent,
           ),
-          child: widget.isCompleted
-              ? const Icon(
-                  Icons.check_rounded,
-                  size: 18,
-                  color: Colors.white,
-                )
-              : null,
         ),
       ),
     );
