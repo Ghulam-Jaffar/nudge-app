@@ -197,38 +197,6 @@ class _PersonalItemsScreenState extends ConsumerState<PersonalItemsScreen> {
                 ),
               ),
             ),
-            // Swipe hint — shows once, then dismisses
-            if (_showSwipeHint)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  child: GestureDetector(
-                    onTap: _dismissSwipeHint,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: colorScheme.primaryContainer.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.swipe_rounded, size: 16, color: colorScheme.primary),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Swipe right to complete, left to delete',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colorScheme.primary,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Icon(Icons.close_rounded, size: 14, color: colorScheme.primary.withValues(alpha: 0.5)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
             itemsAsync.when(
               data: (items) {
                 final filteredItems = _filterItems(items);
@@ -275,20 +243,56 @@ class _PersonalItemsScreenState extends ConsumerState<PersonalItemsScreen> {
                   );
                 }
 
-                return SliverPadding(
-                  padding: const EdgeInsets.only(top: 8, bottom: 100),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final item = filteredItems[index];
-                        return ItemCard(
-                          item: item,
-                          onTap: () => _editItem(item),
-                        );
-                      },
-                      childCount: filteredItems.length,
+                return SliverMainAxisGroup(
+                  slivers: [
+                    // Swipe hint — shows once, only when items exist
+                    if (_showSwipeHint)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          child: GestureDetector(
+                            onTap: _dismissSwipeHint,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: colorScheme.primaryContainer.withValues(alpha: 0.3),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.swipe_rounded, size: 16, color: colorScheme.primary),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Swipe right to complete, left to delete',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: colorScheme.primary,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Icon(Icons.close_rounded, size: 14, color: colorScheme.primary.withValues(alpha: 0.5)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    SliverPadding(
+                      padding: const EdgeInsets.only(top: 8, bottom: 100),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final item = filteredItems[index];
+                            return ItemCard(
+                              item: item,
+                              onTap: () => _editItem(item),
+                            );
+                          },
+                          childCount: filteredItems.length,
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 );
               },
               loading: () => const SkeletonItemList(),

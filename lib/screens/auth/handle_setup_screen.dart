@@ -197,10 +197,16 @@ class _HandleSetupScreenState extends ConsumerState<HandleSetupScreen> {
                                     ? NetworkImage(user!.photoURL!)
                                     : null),
                             child: _selectedPhotoUrl == null && user?.photoURL == null
-                                ? Icon(
-                                    Icons.person_rounded,
-                                    size: 50,
-                                    color: colorScheme.primary,
+                                ? Text(
+                                    _displayNameController.text.isNotEmpty
+                                        ? _displayNameController.text[0].toUpperCase()
+                                        : (user?.displayName?.isNotEmpty == true
+                                            ? user!.displayName![0].toUpperCase()
+                                            : '?'),
+                                    style: theme.textTheme.displayLarge?.copyWith(
+                                      color: colorScheme.primary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   )
                                 : null,
                           ),

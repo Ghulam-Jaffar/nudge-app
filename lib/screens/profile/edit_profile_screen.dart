@@ -125,10 +125,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         ? NetworkImage(_photoUrlController.text)
                         : (user?.photoUrl != null ? NetworkImage(user!.photoUrl!) : null),
                     child: (_photoUrlController.text.isEmpty && user?.photoUrl == null)
-                        ? Icon(
-                            Icons.person_rounded,
-                            size: 60,
-                            color: colorScheme.primary,
+                        ? Text(
+                            _displayNameController.text.isNotEmpty
+                                ? _displayNameController.text[0].toUpperCase()
+                                : (user?.displayName.isNotEmpty == true
+                                    ? user!.displayName[0].toUpperCase()
+                                    : '?'),
+                            style: theme.textTheme.displayLarge?.copyWith(
+                              color: colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
                           )
                         : null,
                   ),

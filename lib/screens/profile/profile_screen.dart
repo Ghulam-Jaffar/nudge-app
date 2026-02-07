@@ -178,10 +178,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ? NetworkImage(appUser!.photoUrl!)
                         : null,
                     child: appUser?.photoUrl == null
-                        ? Icon(
-                            Icons.person_rounded,
-                            size: 50,
-                            color: colorScheme.primary,
+                        ? Text(
+                            appUser?.displayName.isNotEmpty == true
+                                ? appUser!.displayName[0].toUpperCase()
+                                : '?',
+                            style: theme.textTheme.displayLarge?.copyWith(
+                              color: colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
                           )
                         : null,
                   ),
