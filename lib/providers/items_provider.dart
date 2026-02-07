@@ -61,3 +61,9 @@ final spaceItemsProvider =
       .map((snapshot) =>
           snapshot.docs.map((doc) => ReminderItem.fromFirestore(doc)).toList());
 });
+
+/// Count of active (incomplete) items in a space
+final spaceActiveItemCountProvider = Provider.family<int, String>((ref, spaceId) {
+  final items = ref.watch(spaceItemsProvider(spaceId)).value ?? [];
+  return items.where((item) => !item.isCompleted).length;
+});

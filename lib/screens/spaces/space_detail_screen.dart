@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../models/activity_model.dart';
 import '../../models/item_model.dart';
 import '../../models/space_model.dart';
 import '../../providers/providers.dart';
@@ -185,7 +186,13 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
     if (confirmed != true || !mounted) return;
 
     final spaceService = ref.read(spaceServiceProvider);
-    final success = await spaceService.deleteSpace(space.spaceId);
+
+    bool success = false;
+    try {
+      success = await spaceService.deleteSpace(space.spaceId);
+    } catch (e) {
+      debugPrint('Error deleting space: $e');
+    }
 
     if (!mounted) return;
 
@@ -254,6 +261,64 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
+    }
+  }
+
+  bool _canPing(ReminderItem item) {
+    final currentUser = ref.read(currentUserProvider);
+    return item.assignedToUid != null &&
+        item.assignedToUid != currentUser?.uid &&
+        !item.isCompleted;
+  }
+
+  Future<void> _sendPing(ReminderItem item, Space space) async {
+    final currentUser = ref.read(currentUserProvider);
+    if (currentUser == null || item.assignedToUid == null) return;
+
+    HapticFeedback.lightImpact();
+
+    final pingService = ref.read(pingServiceProvider);
+    final activityService = ref.read(activityServiceProvider);
+
+    final ping = await pingService.createPing(
+      spaceId: space.spaceId,
+      itemId: item.itemId,
+      itemTitle: item.title,
+      fromUid: currentUser.uid,
+      toUid: item.assignedToUid!,
+    );
+
+    if (!mounted) return;
+
+    if (ping != null) {
+      // Log activity with visibleTo (private to sender + receiver)
+      try {
+        await activityService.createActivity(
+          spaceId: space.spaceId,
+          actorUid: currentUser.uid,
+          type: ActivityType.ping,
+          targetUid: item.assignedToUid,
+          itemId: item.itemId,
+          itemTitle: item.title,
+          visibleTo: [currentUser.uid, item.assignedToUid!],
+        );
+      } catch (e) {
+        debugPrint('Error logging ping activity: $e');
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Nudged about "${item.title}"!')),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Already nudged recently. Try again later.'),
+          ),
+        );
+      }
     }
   }
 
@@ -381,10 +446,18 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                         delegate: SliverChildBuilderDelegate(
                           (context, index) {
                             final item = filteredItems[index];
+                            final canPing = _canPing(item);
+                            final pingCount = ref.watch(
+                              itemUnseenPingsCountProvider(item.itemId),
+                            );
                             return ItemCard(
                               key: ValueKey(item.itemId),
                               item: item,
                               onTap: () => _editItem(item),
+                              pingCount: pingCount,
+                              onPing: canPing
+                                  ? () => _sendPing(item, space)
+                                  : null,
                             );
                           },
                           childCount: filteredItems.length,

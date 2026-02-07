@@ -35,6 +35,8 @@ class HomeShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final pendingCount = ref.watch(pendingInvitesCountProvider);
+    final pingCount = ref.watch(totalUnseenPingsCountProvider);
+    final totalBadge = pendingCount + pingCount;
     final selectedIndex = _calculateSelectedIndex(context);
     final isOnline = ref.watch(isOnlineProvider);
 
@@ -81,15 +83,15 @@ class HomeShell extends ConsumerWidget {
             label: 'Home',
           ),
           NavigationDestination(
-            icon: pendingCount > 0
+            icon: totalBadge > 0
                 ? Badge(
-                    label: Text('$pendingCount'),
+                    label: Text('$totalBadge'),
                     child: const Icon(Icons.group_work_outlined),
                   )
                 : const Icon(Icons.group_work_outlined),
-            selectedIcon: pendingCount > 0
+            selectedIcon: totalBadge > 0
                 ? Badge(
-                    label: Text('$pendingCount'),
+                    label: Text('$totalBadge'),
                     child: const Icon(Icons.group_work_rounded),
                   )
                 : const Icon(Icons.group_work_rounded),

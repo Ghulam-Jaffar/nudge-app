@@ -128,7 +128,13 @@ class _SpaceEditorSheetState extends ConsumerState<SpaceEditorSheet> {
     setState(() => _isLoading = true);
 
     final spaceService = ref.read(spaceServiceProvider);
-    final success = await spaceService.deleteSpace(widget.space!.spaceId);
+
+    bool success = false;
+    try {
+      success = await spaceService.deleteSpace(widget.space!.spaceId);
+    } catch (e) {
+      debugPrint('Error deleting space: $e');
+    }
 
     if (!mounted) return;
 
@@ -137,10 +143,17 @@ class _SpaceEditorSheetState extends ConsumerState<SpaceEditorSheet> {
     if (success) {
       Navigator.pop(context, true);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Failed to delete space'),
-          backgroundColor: Theme.of(context).colorScheme.error,
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Error'),
+          content: const Text('Failed to delete space. Please try again.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
         ),
       );
     }

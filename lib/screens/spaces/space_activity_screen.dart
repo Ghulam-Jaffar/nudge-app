@@ -18,22 +18,8 @@ class SpaceActivityScreen extends ConsumerStatefulWidget {
   ConsumerState<SpaceActivityScreen> createState() => _SpaceActivityScreenState();
 }
 
-class _SpaceActivityScreenState extends ConsumerState<SpaceActivityScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _SpaceActivityScreenState extends ConsumerState<SpaceActivityScreen> {
   final Map<String, AppUser?> _userCache = {};
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
 
   Future<void> _onRefresh() async {
     HapticFeedback.mediumImpact();
@@ -79,158 +65,83 @@ class _SpaceActivityScreenState extends ConsumerState<SpaceActivityScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Activity'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'All'),
-            Tab(text: 'Activity'),
-            Tab(text: 'Invites'),
-          ],
-        ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          // All tab - combines activities and invites
-          _buildAllTab(activitiesAsync, invitesAsync, theme, colorScheme),
-          // Activity tab
-          _buildActivityTab(activitiesAsync, theme, colorScheme),
-          // Invites tab
-          _buildInvitesTab(invitesAsync, theme, colorScheme),
-        ],
-      ),
-    );
-  }
+      body: RefreshIndicator(
+        onRefresh: _onRefresh,
+        child: activitiesAsync.when(
+          data: (activities) => invitesAsync.when(
+            data: (invites) {
+              final currentUser = ref.watch(currentUserProvider);
+              // Combine and sort by date
+              final allItems = <_TimelineItem>[];
 
-  Widget _buildAllTab(
-    AsyncValue<List<SpaceActivity>> activitiesAsync,
-    AsyncValue<List<SpaceInvite>> invitesAsync,
-    ThemeData theme,
-    ColorScheme colorScheme,
-  ) {
-    return RefreshIndicator(
-      onRefresh: _onRefresh,
-      child: activitiesAsync.when(
-        data: (activities) => invitesAsync.when(
-          data: (invites) {
-            // Combine and sort by date
-            final allItems = <_TimelineItem>[];
-
-            for (final activity in activities) {
-              allItems.add(_TimelineItem(
-                dateTime: activity.createdAt,
-                isActivity: true,
-                activity: activity,
-              ));
-            }
-
-            for (final invite in invites) {
-              allItems.add(_TimelineItem(
-                dateTime: invite.createdAt,
-                isActivity: false,
-                invite: invite,
-              ));
-            }
-
-            allItems.sort((a, b) => b.dateTime.compareTo(a.dateTime));
-
-            if (allItems.isEmpty) {
-              return _buildEmptyState(theme, colorScheme, 'No activity yet');
-            }
-
-            return ListView.builder(
-              physics: const AlwaysScrollableScrollPhysics(),
-              itemCount: allItems.length,
-              itemBuilder: (context, index) {
-                final item = allItems[index];
-                if (item.isActivity) {
-                  return _ActivityTile(
-                    activity: item.activity!,
-                    getUser: _getUser,
-                    formatTimeAgo: _formatTimeAgo,
-                  );
-                } else {
-                  return _InviteTile(
-                    invite: item.invite!,
-                    getUser: _getUser,
-                    formatTimeAgo: _formatTimeAgo,
-                  );
+              for (final activity in activities) {
+                // Filter by visibleTo: show if null (public) or current user is in list
+                if (activity.visibleTo != null &&
+                    currentUser != null &&
+                    !activity.visibleTo!.contains(currentUser.uid)) {
+                  continue;
                 }
-              },
-            );
-          },
+                allItems.add(_TimelineItem(
+                  dateTime: activity.createdAt,
+                  isActivity: true,
+                  activity: activity,
+                ));
+              }
+
+              for (final invite in invites) {
+                allItems.add(_TimelineItem(
+                  dateTime: invite.createdAt,
+                  isActivity: false,
+                  invite: invite,
+                ));
+              }
+
+              allItems.sort((a, b) => b.dateTime.compareTo(a.dateTime));
+
+              if (allItems.isEmpty) {
+                return _buildEmptyState(theme, colorScheme);
+              }
+
+              return ListView.builder(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                itemCount: allItems.length,
+                itemBuilder: (context, index) {
+                  final item = allItems[index];
+                  if (item.isActivity) {
+                    return _ActivityTile(
+                      activity: item.activity!,
+                      getUser: _getUser,
+                      formatTimeAgo: _formatTimeAgo,
+                    );
+                  } else {
+                    return _InviteTile(
+                      invite: item.invite!,
+                      getUser: _getUser,
+                      formatTimeAgo: _formatTimeAgo,
+                    );
+                  }
+                },
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, stack) {
+              debugPrint('Invites error: $error');
+              return _buildErrorState(theme, colorScheme);
+            },
+          ),
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (_, __) => _buildErrorState(theme, colorScheme),
+          error: (error, stack) {
+            debugPrint('Activities error: $error');
+            return _buildErrorState(theme, colorScheme);
+          },
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, __) => _buildErrorState(theme, colorScheme),
       ),
     );
   }
 
-  Widget _buildActivityTab(
-    AsyncValue<List<SpaceActivity>> activitiesAsync,
-    ThemeData theme,
-    ColorScheme colorScheme,
-  ) {
-    return RefreshIndicator(
-      onRefresh: _onRefresh,
-      child: activitiesAsync.when(
-        data: (activities) {
-          if (activities.isEmpty) {
-            return _buildEmptyState(theme, colorScheme, 'No activity yet');
-          }
-
-          return ListView.builder(
-            physics: const AlwaysScrollableScrollPhysics(),
-            itemCount: activities.length,
-            itemBuilder: (context, index) {
-              return _ActivityTile(
-                activity: activities[index],
-                getUser: _getUser,
-                formatTimeAgo: _formatTimeAgo,
-              );
-            },
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, __) => _buildErrorState(theme, colorScheme),
-      ),
-    );
-  }
-
-  Widget _buildInvitesTab(
-    AsyncValue<List<SpaceInvite>> invitesAsync,
-    ThemeData theme,
-    ColorScheme colorScheme,
-  ) {
-    return RefreshIndicator(
-      onRefresh: _onRefresh,
-      child: invitesAsync.when(
-        data: (invites) {
-          if (invites.isEmpty) {
-            return _buildEmptyState(theme, colorScheme, 'No invites');
-          }
-
-          return ListView.builder(
-            physics: const AlwaysScrollableScrollPhysics(),
-            itemCount: invites.length,
-            itemBuilder: (context, index) {
-              return _InviteTile(
-                invite: invites[index],
-                getUser: _getUser,
-                formatTimeAgo: _formatTimeAgo,
-              );
-            },
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, __) => _buildErrorState(theme, colorScheme),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(ThemeData theme, ColorScheme colorScheme, String message) {
+  Widget _buildEmptyState(ThemeData theme, ColorScheme colorScheme) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -250,9 +161,17 @@ class _SpaceActivityScreenState extends ConsumerState<SpaceActivityScreen>
           ),
           const SizedBox(height: 16),
           Text(
-            message,
+            'No activity yet',
             style: theme.textTheme.titleMedium?.copyWith(
               color: colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Activity will appear here when\nmembers interact with this space',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurface.withValues(alpha: 0.4),
             ),
           ),
         ],
@@ -353,6 +272,18 @@ class _ActivityTileState extends State<_ActivityTile> {
         return Icons.task_alt_rounded;
       case ActivityType.itemAssigned:
         return Icons.assignment_ind_outlined;
+      case ActivityType.itemDeleted:
+        return Icons.delete_outline_rounded;
+      case ActivityType.itemUncompleted:
+        return Icons.undo_rounded;
+      case ActivityType.itemUpdated:
+        return Icons.edit_outlined;
+      case ActivityType.itemRestored:
+        return Icons.restore_rounded;
+      case ActivityType.memberRoleChanged:
+        return Icons.admin_panel_settings_outlined;
+      case ActivityType.ping:
+        return Icons.notifications_active_rounded;
     }
   }
 
@@ -364,18 +295,54 @@ class _ActivityTileState extends State<_ActivityTile> {
       targetName: _target?.displayName,
     );
 
+    // Build subtitle with optional metadata details
+    String subtitleText = widget.formatTimeAgo(widget.activity.createdAt);
+    if (widget.activity.type == ActivityType.itemUpdated &&
+        widget.activity.metadata != null) {
+      final changedFields =
+          (widget.activity.metadata!['changedFields'] as List<dynamic>?)
+              ?.cast<String>() ?? [];
+      final details = <String>[];
+      for (final field in changedFields) {
+        switch (field) {
+          case 'priority':
+            final from = widget.activity.metadata!['priorityFrom'] as String?;
+            final to = widget.activity.metadata!['priorityTo'] as String?;
+            if (from != null && to != null) {
+              details.add('Priority: ${from[0].toUpperCase()}${from.substring(1)} \u2192 ${to[0].toUpperCase()}${to.substring(1)}');
+            }
+          case 'assigned':
+            details.add('Assignment changed');
+          case 'remindAt':
+            details.add('Reminder time changed');
+        }
+      }
+      if (details.isNotEmpty) {
+        subtitleText = '${details.join(', ')}\n$subtitleText';
+      }
+    }
+
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: colorScheme.primaryContainer,
+        backgroundColor: widget.activity.type == ActivityType.ping
+            ? Colors.orange.withValues(alpha: 0.2)
+            : colorScheme.primaryContainer,
         backgroundImage: _actor?.photoUrl != null
             ? NetworkImage(_actor!.photoUrl!)
             : null,
         child: _actor?.photoUrl == null
-            ? Icon(_getActivityIcon(), color: colorScheme.primary, size: 20)
+            ? Icon(
+                _getActivityIcon(),
+                color: widget.activity.type == ActivityType.ping
+                    ? Colors.orange
+                    : colorScheme.primary,
+                size: 20,
+              )
             : null,
       ),
       title: Text(description),
-      subtitle: Text(widget.formatTimeAgo(widget.activity.createdAt)),
+      subtitle: Text(subtitleText),
+      isThreeLine: subtitleText.contains('\n'),
     );
   }
 }

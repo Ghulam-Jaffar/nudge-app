@@ -187,15 +187,17 @@ class _SpacesListScreenState extends ConsumerState<SpacesListScreen> {
   }
 }
 
-class _SpaceCard extends StatelessWidget {
+class _SpaceCard extends ConsumerWidget {
   final Space space;
 
   const _SpaceCard({required this.space});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final activeCount = ref.watch(spaceActiveItemCountProvider(space.spaceId));
+    final pingCount = ref.watch(spaceUnseenPingsCountProvider(space.spaceId));
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -255,17 +257,35 @@ class _SpaceCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 12),
                         Icon(
-                          Icons.checklist_rounded,
+                          Icons.check_box_outlined,
                           size: 16,
                           color: colorScheme.onSurface.withValues(alpha: 0.5),
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '${space.itemCount}',
+                          '$activeCount',
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurface.withValues(alpha: 0.6),
+                            color: activeCount == 0
+                                ? colorScheme.onSurface.withValues(alpha: 0.3)
+                                : colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
+                        if (pingCount > 0) ...[
+                          const SizedBox(width: 12),
+                          Icon(
+                            Icons.notifications_active_rounded,
+                            size: 16,
+                            color: Colors.orange,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$pingCount',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: Colors.orange,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ],

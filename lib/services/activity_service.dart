@@ -21,6 +21,8 @@ class ActivityService {
     String? targetUid,
     String? itemId,
     String? itemTitle,
+    Map<String, dynamic>? metadata,
+    List<String>? visibleTo,
   }) async {
     try {
       final activityId = _uuid.v4();
@@ -35,6 +37,8 @@ class ActivityService {
         itemId: itemId,
         itemTitle: itemTitle,
         createdAt: now,
+        metadata: metadata,
+        visibleTo: visibleTo,
       );
 
       await _activitiesCollection.doc(activityId).set(activity.toMap());

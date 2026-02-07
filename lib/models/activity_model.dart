@@ -10,6 +10,12 @@ enum ActivityType {
   itemCreated,
   itemCompleted,
   itemAssigned,
+  itemDeleted,
+  itemUncompleted,
+  itemUpdated,
+  itemRestored,
+  memberRoleChanged,
+  ping,
 }
 
 class SpaceActivity extends Equatable {
@@ -21,6 +27,8 @@ class SpaceActivity extends Equatable {
   final String? itemId;
   final String? itemTitle;
   final DateTime createdAt;
+  final Map<String, dynamic>? metadata;
+  final List<String>? visibleTo;
 
   const SpaceActivity({
     required this.activityId,
@@ -31,6 +39,8 @@ class SpaceActivity extends Equatable {
     this.itemId,
     this.itemTitle,
     required this.createdAt,
+    this.metadata,
+    this.visibleTo,
   });
 
   factory SpaceActivity.fromFirestore(DocumentSnapshot doc) {
@@ -47,6 +57,8 @@ class SpaceActivity extends Equatable {
       itemId: data['itemId'] as String?,
       itemTitle: data['itemTitle'] as String?,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      metadata: (data['metadata'] as Map<String, dynamic>?),
+      visibleTo: (data['visibleTo'] as List<dynamic>?)?.cast<String>(),
     );
   }
 
@@ -60,6 +72,8 @@ class SpaceActivity extends Equatable {
       if (itemId != null) 'itemId': itemId,
       if (itemTitle != null) 'itemTitle': itemTitle,
       'createdAt': Timestamp.fromDate(createdAt),
+      if (metadata != null) 'metadata': metadata,
+      if (visibleTo != null) 'visibleTo': visibleTo,
     };
   }
 
@@ -72,6 +86,8 @@ class SpaceActivity extends Equatable {
     String? itemId,
     String? itemTitle,
     DateTime? createdAt,
+    Map<String, dynamic>? metadata,
+    List<String>? visibleTo,
   }) {
     return SpaceActivity(
       activityId: activityId ?? this.activityId,
@@ -82,6 +98,8 @@ class SpaceActivity extends Equatable {
       itemId: itemId ?? this.itemId,
       itemTitle: itemTitle ?? this.itemTitle,
       createdAt: createdAt ?? this.createdAt,
+      metadata: metadata ?? this.metadata,
+      visibleTo: visibleTo ?? this.visibleTo,
     );
   }
 
@@ -109,7 +127,57 @@ class SpaceActivity extends Equatable {
         return '$actor completed "${itemTitle ?? 'a reminder'}"';
       case ActivityType.itemAssigned:
         return '$actor assigned "${itemTitle ?? 'a reminder'}" to $target';
+      case ActivityType.itemDeleted:
+        return '$actor deleted "${itemTitle ?? 'a reminder'}"';
+      case ActivityType.itemUncompleted:
+        return '$actor uncompleted "${itemTitle ?? 'a reminder'}"';
+      case ActivityType.itemUpdated:
+        return _getUpdateDescription(actor);
+      case ActivityType.itemRestored:
+        return '$actor restored "${itemTitle ?? 'a reminder'}"';
+      case ActivityType.memberRoleChanged:
+        final newRole = metadata?['newRole'] as String? ?? 'member';
+        return '$actor changed $target\'s role to $newRole';
+      case ActivityType.ping:
+        return '$actor nudged $target about "${itemTitle ?? 'a reminder'}"';
     }
+  }
+
+  String _getUpdateDescription(String actor) {
+    final title = itemTitle ?? 'a reminder';
+    if (metadata == null) return '$actor updated "$title"';
+
+    final changedFields = (metadata!['changedFields'] as List<dynamic>?)?.cast<String>() ?? [];
+    if (changedFields.isEmpty) return '$actor updated "$title"';
+
+    final descriptions = <String>[];
+    for (final field in changedFields) {
+      switch (field) {
+        case 'title':
+          final from = metadata!['titleFrom'] as String?;
+          final to = metadata!['titleTo'] as String?;
+          if (from != null && to != null) {
+            descriptions.add('renamed "$from" to "$to"');
+          }
+        case 'priority':
+          final from = metadata!['priorityFrom'] as String?;
+          final to = metadata!['priorityTo'] as String?;
+          if (from != null && to != null) {
+            descriptions.add('changed priority from $from to $to');
+          }
+        case 'assigned':
+          descriptions.add('changed assignment');
+        case 'remindAt':
+          descriptions.add('changed reminder time');
+        case 'details':
+          descriptions.add('updated details');
+        case 'repeatRule':
+          descriptions.add('changed repeat rule');
+      }
+    }
+
+    if (descriptions.isEmpty) return '$actor updated "$title"';
+    return '$actor ${descriptions.first}';
   }
 
   @override
@@ -122,5 +190,7 @@ class SpaceActivity extends Equatable {
         itemId,
         itemTitle,
         createdAt,
+        metadata,
+        visibleTo,
       ];
 }

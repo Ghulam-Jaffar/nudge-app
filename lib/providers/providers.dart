@@ -6,3 +6,4 @@ export 'spaces_provider.dart';
 export 'invites_provider.dart';
 export 'connectivity_provider.dart';
 export 'activity_provider.dart';
+export 'ping_provider.dart';

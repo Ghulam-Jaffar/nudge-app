@@ -1,14 +1,20 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
+import '../models/activity_model.dart';
 import '../models/space_model.dart';
+import 'activity_service.dart';
 
 class SpaceService {
   final FirebaseFirestore _firestore;
   final Uuid _uuid = const Uuid();
+  final ActivityService? _activityService;
 
-  SpaceService({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+  SpaceService({
+    FirebaseFirestore? firestore,
+    ActivityService? activityService,
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _activityService = activityService;
 
   CollectionReference<Map<String, dynamic>> get _spacesCollection =>
       _firestore.collection('spaces');
@@ -73,10 +79,31 @@ class SpaceService {
   /// Delete a space (only owner can do this)
   Future<bool> deleteSpace(String spaceId) async {
     try {
-      // Also delete all items in the space
+      // Best-effort: revoke pending invites (separate batch so rule
+      // failures on invites sent by other admins don't block deletion)
+      try {
+        final invitesSnapshot = await _firestore
+            .collection('spaceInvites')
+            .where('spaceId', isEqualTo: spaceId)
+            .where('status', isEqualTo: 'pending')
+            .get();
+
+        if (invitesSnapshot.docs.isNotEmpty) {
+          final inviteBatch = _firestore.batch();
+          for (final doc in invitesSnapshot.docs) {
+            inviteBatch.update(doc.reference, {'status': 'revoked'});
+          }
+          await inviteBatch.commit();
+        }
+      } catch (e) {
+        debugPrint('Warning: Could not revoke pending invites: $e');
+      }
+
+      // Delete all space items and the space itself
       final itemsSnapshot = await _firestore
           .collection('items')
           .where('spaceId', isEqualTo: spaceId)
+          .where('type', isEqualTo: 'space')
           .get();
 
       final batch = _firestore.batch();
@@ -85,18 +112,6 @@ class SpaceService {
         batch.delete(doc.reference);
       }
 
-      // Delete all pending invites for this space
-      final invitesSnapshot = await _firestore
-          .collection('spaceInvites')
-          .where('spaceId', isEqualTo: spaceId)
-          .where('status', isEqualTo: 'pending')
-          .get();
-
-      for (final doc in invitesSnapshot.docs) {
-        batch.update(doc.reference, {'status': 'revoked'});
-      }
-
-      // Delete the space
       batch.delete(_spacesCollection.doc(spaceId));
 
       await batch.commit();
@@ -158,12 +173,28 @@ class SpaceService {
     required String spaceId,
     required String uid,
     required MemberRole role,
+    String? actorUid,
   }) async {
     try {
       await _spacesCollection.doc(spaceId).update({
         'members.$uid.role': role.name,
         'updatedAt': FieldValue.serverTimestamp(),
       });
+
+      // Best-effort activity logging
+      if (actorUid != null) {
+        try {
+          await _activityService?.createActivity(
+            spaceId: spaceId,
+            actorUid: actorUid,
+            type: ActivityType.memberRoleChanged,
+            targetUid: uid,
+            metadata: {'newRole': role.name},
+          );
+        } catch (e) {
+          debugPrint('Error logging memberRoleChanged activity: $e');
+        }
+      }
 
       return true;
     } catch (e) {

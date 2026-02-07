@@ -7,6 +7,8 @@ import '../services/local_notification_service.dart';
 import '../services/fcm_service.dart';
 import '../services/space_service.dart';
 import '../services/invite_service.dart';
+import '../services/activity_service.dart';
+import '../services/ping_service.dart';
 
 final firebaseAuthProvider = Provider<FirebaseAuth>((ref) {
   return FirebaseAuth.instance;
@@ -20,8 +22,13 @@ final userServiceProvider = Provider<UserService>((ref) {
   return UserService();
 });
 
+final activityServiceProvider = Provider<ActivityService>((ref) {
+  return ActivityService();
+});
+
 final itemServiceProvider = Provider<ItemService>((ref) {
-  return ItemService();
+  final activityService = ref.watch(activityServiceProvider);
+  return ItemService(activityService: activityService);
 });
 
 final localNotificationServiceProvider = Provider<LocalNotificationService>((ref) {
@@ -33,11 +40,16 @@ final fcmServiceProvider = Provider<FCMService>((ref) {
 });
 
 final spaceServiceProvider = Provider<SpaceService>((ref) {
-  return SpaceService();
+  final activityService = ref.watch(activityServiceProvider);
+  return SpaceService(activityService: activityService);
 });
 
 final inviteServiceProvider = Provider<InviteService>((ref) {
   return InviteService();
+});
+
+final pingServiceProvider = Provider<PingService>((ref) {
+  return PingService();
 });
 
 final authStateProvider = StreamProvider<User?>((ref) {

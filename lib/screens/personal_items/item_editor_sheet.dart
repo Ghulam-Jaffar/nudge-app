@@ -79,6 +79,12 @@ class _ItemEditorSheetState extends ConsumerState<ItemEditorSheet> {
       final itemService = ref.read(itemServiceProvider);
       await itemService.markAsViewed(widget.item!.itemId, user.uid);
     }
+
+    // Clear any unseen pings for this item
+    if (widget.item!.type == ItemType.space) {
+      final pingService = ref.read(pingServiceProvider);
+      await pingService.markPingsAsSeen(widget.item!.itemId, user.uid);
+    }
   }
 
   @override
@@ -164,6 +170,7 @@ class _ItemEditorSheetState extends ConsumerState<ItemEditorSheet> {
           details: _detailsController.text.trim().isEmpty
               ? null
               : _detailsController.text.trim(),
+          clearDetails: _detailsController.text.trim().isEmpty && widget.item!.details != null,
           remindAt: combinedDateTime,
           clearRemindAt: combinedDateTime == null && widget.item!.remindAt != null,
           priority: _priority,
@@ -171,6 +178,7 @@ class _ItemEditorSheetState extends ConsumerState<ItemEditorSheet> {
           clearRepeatRule: _repeatRule == null && widget.item!.repeatRule != null,
           assignedToUid: _assignedToUid,
           clearAssignedTo: _assignedToUid == null && widget.item!.assignedToUid != null,
+          spaceId: _effectiveSpaceId,
         );
 
         if (success) {
@@ -270,11 +278,22 @@ class _ItemEditorSheetState extends ConsumerState<ItemEditorSheet> {
 
     setState(() => _isLoading = true);
 
+    final user = ref.read(currentUserProvider);
     final itemService = ref.read(itemServiceProvider);
     final notificationService = ref.read(localNotificationServiceProvider);
 
-    await notificationService.cancelItemNotification(widget.item!.itemId);
-    final success = await itemService.deleteItem(widget.item!.itemId, spaceId: widget.item!.spaceId);
+    bool success = false;
+    try {
+      await notificationService.cancelItemNotification(widget.item!.itemId);
+      success = await itemService.deleteItem(
+        widget.item!.itemId,
+        spaceId: widget.item!.spaceId,
+        actorUid: user?.uid,
+        itemTitle: widget.item!.title,
+      );
+    } catch (e) {
+      debugPrint('Error deleting item: $e');
+    }
 
     if (!mounted) return;
 
@@ -283,10 +302,17 @@ class _ItemEditorSheetState extends ConsumerState<ItemEditorSheet> {
     if (success) {
       Navigator.pop(context, true);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Failed to delete item'),
-          backgroundColor: Theme.of(context).colorScheme.error,
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Error'),
+          content: const Text('Failed to delete item. Please try again.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
         ),
       );
     }

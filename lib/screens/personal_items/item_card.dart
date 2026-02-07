@@ -11,6 +11,8 @@ class ItemCard extends ConsumerWidget {
   final VoidCallback? onDelete;
   final bool enableSwipe;
   final String? assigneeName; // Display name of assigned user
+  final int pingCount;
+  final VoidCallback? onPing;
 
   const ItemCard({
     super.key,
@@ -19,6 +21,8 @@ class ItemCard extends ConsumerWidget {
     this.onDelete,
     this.enableSwipe = true,
     this.assigneeName,
+    this.pingCount = 0,
+    this.onPing,
   });
 
   bool get _isOverdue =>
@@ -85,6 +89,8 @@ class ItemCard extends ConsumerWidget {
       itemId: item.itemId,
       updatedByUid: user.uid,
       isCompleted: value,
+      spaceId: item.spaceId,
+      itemTitle: item.title,
     );
 
     // Cancel notification if completed
@@ -110,35 +116,63 @@ class ItemCard extends ConsumerWidget {
     // Store item for undo before deleting
     final deletedItem = item;
 
-    await notificationService.cancelItemNotification(item.itemId);
-    final success = await itemService.deleteItem(item.itemId, spaceId: item.spaceId);
-
-    if (success && context.mounted) {
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Deleted "${item.title}"'),
-          duration: const Duration(seconds: 5),
-          action: SnackBarAction(
-            label: 'Undo',
-            onPressed: () async {
-              // Restore the item
-              final restored = await itemService.restoreItem(deletedItem);
-              if (restored && context.mounted) {
-                // Reschedule notification if needed
-                if (deletedItem.remindAt != null &&
-                    deletedItem.remindAt!.isAfter(DateTime.now()) &&
-                    !deletedItem.isCompleted) {
-                  await notificationService.scheduleItemNotification(deletedItem);
-                }
-              }
-            },
-          ),
-        ),
+    try {
+      await notificationService.cancelItemNotification(item.itemId);
+      final success = await itemService.deleteItem(
+        item.itemId,
+        spaceId: item.spaceId,
+        actorUid: user.uid,
+        itemTitle: item.title,
       );
-    }
 
-    return success;
+      if (success && context.mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Deleted "${item.title}"'),
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Undo',
+              onPressed: () async {
+                // Restore the item
+                final restored = await itemService.restoreItem(
+                  deletedItem,
+                  actorUid: user.uid,
+                );
+                if (restored && context.mounted) {
+                  // Reschedule notification if needed
+                  if (deletedItem.remindAt != null &&
+                      deletedItem.remindAt!.isAfter(DateTime.now()) &&
+                      !deletedItem.isCompleted) {
+                    await notificationService.scheduleItemNotification(deletedItem);
+                  }
+                }
+              },
+            ),
+          ),
+        );
+      } else if (!success && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Failed to delete item'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+
+      return success;
+    } catch (e) {
+      debugPrint('Error deleting item: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Failed to delete item'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+      return false;
+    }
   }
 
   bool _isUnread(String? currentUserUid) {
@@ -214,8 +248,8 @@ class ItemCard extends ConsumerWidget {
                       ),
                     ],
 
-                    // Remind at, repeat, and assignee
-                    if (item.remindAt != null || item.repeatRule != null || item.assignedToUid != null) ...[
+                    // Remind at, repeat, assignee, and nudge
+                    if (item.remindAt != null || item.repeatRule != null || item.assignedToUid != null || onPing != null) ...[
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 8,
@@ -244,6 +278,15 @@ class ItemCard extends ConsumerWidget {
                               label: assigneeName!,
                               isAssignee: true,
                             ),
+                          if (onPing != null)
+                            GestureDetector(
+                              onTap: onPing,
+                              child: const _InfoChip(
+                                icon: Icons.notifications_active_rounded,
+                                label: 'Nudge',
+                                isNudge: true,
+                              ),
+                            ),
                         ],
                       ),
                     ],
@@ -251,13 +294,22 @@ class ItemCard extends ConsumerWidget {
                 ),
               ),
 
-              // Priority indicator and unread dot
-              if (item.priority != ItemPriority.none || isUnread) ...[
+              // Priority indicator, unread dot, and ping badge
+              if (item.priority != ItemPriority.none || isUnread || pingCount > 0) ...[
                 const SizedBox(width: 8),
                 Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (isUnread)
+                    if (pingCount > 0)
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: Colors.orange,
+                          shape: BoxShape.circle,
+                        ),
+                      )
+                    else if (isUnread)
                       Container(
                         width: 8,
                         height: 8,
@@ -266,7 +318,7 @@ class ItemCard extends ConsumerWidget {
                           shape: BoxShape.circle,
                         ),
                       ),
-                    if (isUnread && item.priority != ItemPriority.none)
+                    if ((isUnread || pingCount > 0) && item.priority != ItemPriority.none)
                       const SizedBox(height: 4),
                     if (item.priority != ItemPriority.none)
                       Icon(
@@ -418,12 +470,14 @@ class _InfoChip extends StatelessWidget {
   final String label;
   final bool isOverdue;
   final bool isAssignee;
+  final bool isNudge;
 
   const _InfoChip({
     required this.icon,
     required this.label,
     this.isOverdue = false,
     this.isAssignee = false,
+    this.isNudge = false,
   });
 
   @override
@@ -439,6 +493,9 @@ class _InfoChip extends StatelessWidget {
     } else if (isAssignee) {
       bgColor = colorScheme.tertiary.withValues(alpha: 0.1);
       fgColor = colorScheme.tertiary;
+    } else if (isNudge) {
+      bgColor = Colors.orange.withValues(alpha: 0.1);
+      fgColor = Colors.orange;
     } else {
       bgColor = colorScheme.primary.withValues(alpha: 0.1);
       fgColor = colorScheme.primary;

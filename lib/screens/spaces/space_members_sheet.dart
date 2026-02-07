@@ -116,11 +116,13 @@ class _SpaceMembersSheetState extends ConsumerState<SpaceMembersSheet> {
   Future<void> _updateRole(String uid, MemberRole newRole) async {
     setState(() => _processingUid = uid);
 
+    final currentUser = ref.read(currentUserProvider);
     final spaceService = ref.read(spaceServiceProvider);
     final success = await spaceService.updateMemberRole(
       spaceId: widget.space.spaceId,
       uid: uid,
       role: newRole,
+      actorUid: currentUser?.uid,
     );
 
     if (!mounted) return;

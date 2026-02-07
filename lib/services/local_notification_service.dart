@@ -98,8 +98,12 @@ class LocalNotificationService {
 
   /// Cancel a notification for an item
   Future<void> cancelItemNotification(String itemId) async {
-    await _notifications.cancel(_generateNotificationId(itemId));
-    debugPrint('Cancelled notification for item $itemId');
+    try {
+      await _notifications.cancel(_generateNotificationId(itemId));
+      debugPrint('Cancelled notification for item $itemId');
+    } catch (e) {
+      debugPrint('Error cancelling notification for item $itemId: $e');
+    }
   }
 
   /// Cancel all notifications
