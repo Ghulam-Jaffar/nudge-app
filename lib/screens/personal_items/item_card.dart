@@ -80,7 +80,7 @@ class ItemCard extends ConsumerWidget {
     final user = ref.read(currentUserProvider);
     if (user == null) return;
 
-    HapticFeedback.lightImpact();
+    HapticFeedback.mediumImpact();
 
     final itemService = ref.read(itemServiceProvider);
     final notificationService = ref.read(localNotificationServiceProvider);
@@ -447,8 +447,8 @@ class _CompletionCheckboxState extends State<_CompletionCheckbox>
       duration: const Duration(milliseconds: 200),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.35).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
     );
   }
 
@@ -462,6 +462,7 @@ class _CompletionCheckboxState extends State<_CompletionCheckbox>
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () async {
+        HapticFeedback.mediumImpact();
         await _controller.forward();
         await _controller.reverse();
         widget.onChanged(!widget.isCompleted);
