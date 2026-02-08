@@ -108,7 +108,7 @@ class ItemCard extends ConsumerWidget {
     final user = ref.read(currentUserProvider);
     if (user == null) return;
 
-    HapticFeedback.mediumImpact();
+    HapticFeedback.heavyImpact();
 
     final itemService = ref.read(itemServiceProvider);
     final notificationService = ref.read(localNotificationServiceProvider);

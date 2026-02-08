@@ -306,7 +306,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
     final currentUser = ref.read(currentUserProvider);
     if (currentUser == null || item.assignedToUid == null) return;
 
-    HapticFeedback.lightImpact();
+    HapticFeedback.mediumImpact();
 
     final pingService = ref.read(pingServiceProvider);
     final activityService = ref.read(activityServiceProvider);

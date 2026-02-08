@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+enum AvatarGender { male, female }
+
 class AvatarPickerDialog extends StatefulWidget {
   const AvatarPickerDialog({super.key});
 
@@ -7,36 +9,30 @@ class AvatarPickerDialog extends StatefulWidget {
   State<AvatarPickerDialog> createState() => _AvatarPickerDialogState();
 }
 
-class _AvatarPickerDialogState extends State<AvatarPickerDialog>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _AvatarPickerDialogState extends State<AvatarPickerDialog> {
+  AvatarGender _selectedGender = AvatarGender.male;
   String? _selectedAvatar;
 
-  // Generate avatar URLs from the API
+  // iran.liara.run API - Beautiful, consistent avatars with proper gender separation
   static const String _baseUrl = 'https://avatar.iran.liara.run/public';
 
-  // Using numbered avatars - the API has about 100 public avatars
-  // We'll show 20 from each category for simplicity
-  final List<String> _maleAvatars = List.generate(
-    20,
-    (index) => '$_baseUrl/${index + 1}',
-  );
+  // Use the username-based endpoints for proper gender separation
+  final List<String> _maleUsernames = [
+    'john', 'alex', 'mike', 'chris', 'david', 'james', 'robert', 'michael',
+    'william', 'richard', 'thomas', 'charles', 'daniel', 'matthew', 'mark',
+  ];
 
-  final List<String> _femaleAvatars = List.generate(
-    20,
-    (index) => '$_baseUrl/${index + 51}', // Offset to get different avatars
-  );
+  final List<String> _femaleUsernames = [
+    'sarah', 'jessica', 'emma', 'olivia', 'sophia', 'isabella', 'mia', 'charlotte',
+    'amelia', 'harper', 'evelyn', 'abigail', 'emily', 'ella', 'madison',
+  ];
 
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+  List<String> get _currentAvatars {
+    if (_selectedGender == AvatarGender.male) {
+      return _maleUsernames.map((name) => '$_baseUrl/boy?username=$name').toList();
+    } else {
+      return _femaleUsernames.map((name) => '$_baseUrl/girl?username=$name').toList();
+    }
   }
 
   @override
@@ -51,10 +47,10 @@ class _AvatarPickerDialogState extends State<AvatarPickerDialog>
           children: [
             // Header
             Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.fromLTRB(20, 16, 16, 12),
               child: Row(
                 children: [
-                  Icon(Icons.face_rounded, color: colorScheme.primary),
+                  Icon(Icons.face_rounded, color: colorScheme.primary, size: 24),
                   const SizedBox(width: 12),
                   Text(
                     'Choose Avatar',
@@ -66,30 +62,43 @@ class _AvatarPickerDialogState extends State<AvatarPickerDialog>
                   IconButton(
                     icon: const Icon(Icons.close_rounded),
                     onPressed: () => Navigator.pop(context),
+                    visualDensity: VisualDensity.compact,
                   ),
                 ],
               ),
             ),
-            const Divider(height: 1),
 
-            // Tabs
-            TabBar(
-              controller: _tabController,
-              tabs: const [
-                Tab(text: 'Male', icon: Icon(Icons.man_rounded)),
-                Tab(text: 'Female', icon: Icon(Icons.woman_rounded)),
-              ],
+            // Gender selector (SegmentedButton like Today/Later/Done)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: SegmentedButton<AvatarGender>(
+                segments: const [
+                  ButtonSegment(
+                    value: AvatarGender.male,
+                    label: Text('Male'),
+                    icon: Icon(Icons.man_rounded),
+                  ),
+                  ButtonSegment(
+                    value: AvatarGender.female,
+                    label: Text('Female'),
+                    icon: Icon(Icons.woman_rounded),
+                  ),
+                ],
+                selected: {_selectedGender},
+                onSelectionChanged: (Set<AvatarGender> selection) {
+                  setState(() {
+                    _selectedGender = selection.first;
+                    _selectedAvatar = null; // Clear selection when switching
+                  });
+                },
+              ),
             ),
+
+            const Divider(height: 1),
 
             // Avatar Grid
             Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildAvatarGrid(_maleAvatars),
-                  _buildAvatarGrid(_femaleAvatars),
-                ],
-              ),
+              child: _buildAvatarGrid(_currentAvatars),
             ),
 
             // Footer buttons
@@ -143,11 +152,12 @@ class _AvatarPickerDialogState extends State<AvatarPickerDialog>
           child: Container(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
+              color: colorScheme.surfaceContainerHighest,
               border: Border.all(
                 color: isSelected
                     ? colorScheme.primary
-                    : Colors.transparent,
-                width: 3,
+                    : colorScheme.outlineVariant,
+                width: isSelected ? 3 : 1,
               ),
               boxShadow: isSelected
                   ? [
@@ -165,13 +175,18 @@ class _AvatarPickerDialogState extends State<AvatarPickerDialog>
                 fit: BoxFit.cover,
                 loadingBuilder: (context, child, loadingProgress) {
                   if (loadingProgress == null) return child;
-                  return Center(
-                    child: CircularProgressIndicator(
-                      value: loadingProgress.expectedTotalBytes != null
-                          ? loadingProgress.cumulativeBytesLoaded /
-                              loadingProgress.expectedTotalBytes!
-                          : null,
-                      strokeWidth: 2,
+                  // Show shimmer effect while loading
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Icon(
+                        Icons.person_rounded,
+                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                        size: 28,
+                      ),
                     ),
                   );
                 },
@@ -181,6 +196,7 @@ class _AvatarPickerDialogState extends State<AvatarPickerDialog>
                     child: Icon(
                       Icons.person_rounded,
                       color: colorScheme.onSurfaceVariant,
+                      size: 32,
                     ),
                   );
                 },

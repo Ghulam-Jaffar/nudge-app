@@ -7,7 +7,7 @@ import '../theme/theme_packs.dart';
 /// Service to sync reminder data and theme colors to the Android home screen widget.
 class WidgetService {
   static const String _appGroupId = 'com.sharedreminder.shared_reminder_app';
-  static const String _androidWidgetName = 'NudgeWidgetProvider';
+  static const String _androidWidgetName = 'NudgeWidgetProviderSimple';
 
   /// Initialize home_widget with app group ID.
   static Future<void> initialize() async {
