@@ -48,7 +48,7 @@
 
         <!-- Home Screen Widget -->
         <receiver
-            android:name=".NudgeWidgetProvider"
+            android:name=".NudgeWidgetProviderSimple"
             android:exported="true"
             android:label="@string/widget_name">
             <intent-filter>
@@ -57,13 +57,8 @@
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/nudge_widget_info" />
+                android:resource="@xml/nudge_widget_simple_info" />
         </receiver>
-
-        <service
-            android:name=".NudgeWidgetService"
-            android:permission="android.permission.BIND_REMOTEVIEWS"
-            android:exported="false" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

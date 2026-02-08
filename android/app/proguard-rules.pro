@@ -21,9 +21,7 @@
 -keep class com.google.gson.stream.** { *; }
 
 # Home screen widget
--keep class com.sharedreminder.shared_reminder_app.NudgeWidgetProvider { *; }
--keep class com.sharedreminder.shared_reminder_app.NudgeWidgetService { *; }
--keep class com.sharedreminder.shared_reminder_app.NudgeWidgetItemFactory { *; }
+-keep class com.sharedreminder.shared_reminder_app.NudgeWidgetProviderSimple { *; }
 
 # home_widget package
 -keep class es.antonborri.home_widget.** { *; }

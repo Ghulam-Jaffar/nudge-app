@@ -43,9 +43,10 @@ class _SharedReminderAppState extends ConsumerState<SharedReminderApp>
   }
 
   void _updateHomeWidget() {
+    final user = ref.read(currentUserProvider);
+    if (user == null) return; // Not signed in — widget shows sign-in prompt
     final widgetItems = ref.read(widgetItemsProvider);
     final themeState = ref.read(themeProvider);
-    // Use the pack directly since we can't access BuildContext reliably here
     final isDark = themeState.pack.isDarkPack;
     WidgetService.updateWidget(
       todayItems: widgetItems,

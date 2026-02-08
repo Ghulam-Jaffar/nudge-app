@@ -4,6 +4,16 @@ import 'package:home_widget/home_widget.dart';
 import '../models/item_model.dart';
 import '../theme/theme_packs.dart';
 
+/// Extension to convert Color to ARGB int32 for Android widgets
+extension ColorToInt on Color {
+  int toARGB32() {
+    return ((a * 255).round() << 24) |
+           ((r * 255).round() << 16) |
+           ((g * 255).round() << 8) |
+           ((b * 255).round());
+  }
+}
+
 /// Service to sync reminder data and theme colors to the Android home screen widget.
 class WidgetService {
   static const String _appGroupId = 'com.sharedreminder.shared_reminder_app';
@@ -33,8 +43,8 @@ class WidgetService {
           return a.remindAt!.compareTo(b.remindAt!);
         });
 
-      // Take up to 6 items for the widget
-      final widgetItems = sorted.take(6).toList();
+      // Take up to 5 items for the widget (matches Android provider limit)
+      final widgetItems = sorted.take(5).toList();
 
       // Serialize items as JSON array
       final itemsJson = jsonEncode(widgetItems.map((item) => {
@@ -48,6 +58,7 @@ class WidgetService {
       }).toList());
 
       // Save data to shared storage
+      await HomeWidget.saveWidgetData<bool>('signed_in', true);
       await HomeWidget.saveWidgetData<String>('items_json', itemsJson);
       await HomeWidget.saveWidgetData<int>('item_count', todayItems.length);
       await HomeWidget.saveWidgetData<int>('incomplete_count',
@@ -132,6 +143,7 @@ class WidgetService {
   /// Clear widget data (e.g., on sign out).
   static Future<void> clearWidget() async {
     try {
+      await HomeWidget.saveWidgetData<bool>('signed_in', false);
       await HomeWidget.saveWidgetData<String>('items_json', '[]');
       await HomeWidget.saveWidgetData<int>('item_count', 0);
       await HomeWidget.saveWidgetData<int>('incomplete_count', 0);
